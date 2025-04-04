@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messagerie Instantanée</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="login-container" id="login-container">
+        <h2>Connexion</h2>
+        <input type="text" id="login-username" placeholder="Nom d'utilisateur">
+        <input type="password" id="login-password" placeholder="Mot de passe">
+        <button id="login-button">Se connecter</button>
+    </div>
+    <div class="connected-user" id="connected-user" style="display: none;">
+        <p>Utilisateur connecté : <span id="connected-username"></span> <button id="logout-button">Déconnexion</button></p>
+    </div>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Messagerie Instantanée</h1>
+        </div>
+        <div class="user-selection">
+            <label for="user-select">Sélectionnez un utilisateur :</label>
+            <select id="user-select">
+                <!-- Les options seront ajoutées ici par JavaScript -->
+            </select>
+        </div>
+        <div class="chat-messages" id="chat-messages">
+            <!-- Les messages seront affichés ici -->
+        </div>
+        <div class="chat-input">
+            <input type="text" id="message-input" placeholder="Tapez votre message...">
+            <button id="send-button">Envoyer</button>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
