@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscription</title>
+    <title>Inscription avec Confettis</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -45,15 +45,15 @@
 </head>
 <body>
     <div class="container">
-        <h2>S'inscrire</h2>
-        <form action="https://mdp2014.github.io/messagerie/" method="post">
+        <h2>Inscription</h2>
+        <form id="signupForm">
             <div class="form-group">
                 <label for="username">Nom d'utilisateur :</label>
-                <input type="text" id="username" name="username" required>
+                <input type="text" id="username" name="username" placeholder="Votre nom" required>
             </div>
             <div class="form-group">
                 <label for="email">Email :</label>
-                <input type="email" id="email" name="email" required>
+                <input type="email" id="email" name="email" placeholder="Votre email" required>
             </div>
             <div class="form-group">
                 <label for="password">Mot de passe :</label>
@@ -64,5 +64,23 @@
             </div>
         </form>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script>
+        const form = document.getElementById('signupForm');
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault(); // Empêche le rechargement de la page
+
+            // Affiche les confettis
+            confetti({
+                particleCount: 100,
+                spread: 70,
+                origin: { y: 0.6 }
+            });
+
+            alert("Inscription réussie !");
+        });
+    </script>
 </body>
 </html>
