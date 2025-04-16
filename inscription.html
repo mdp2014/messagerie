@@ -63,15 +63,17 @@
 
     <!-- Ajouter la bibliothèque Supabase -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <!-- Ajouter la bibliothèque canvas-confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
     <script>
         // Configuration Supabase
         const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Clé tronquée pour la sécurité
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         // Gestion de l'inscription
         const form = document.getElementById('signupForm');
-
         form.addEventListener('submit', async function(event) {
             event.preventDefault(); // Empêche le rechargement de la page
 
@@ -93,6 +95,13 @@
                 } else {
                     alert('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.');
                     form.reset(); // Réinitialise le formulaire
+
+                    // Lancer les confettis
+                    confetti({
+                        particleCount: 100,
+                        spread: 70,
+                        origin: { y: 0.6 }
+                    });
                 }
             } catch (err) {
                 console.error('Une erreur s\'est produite :', err);
