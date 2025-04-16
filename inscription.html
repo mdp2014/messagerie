@@ -52,10 +52,6 @@
                 <input type="text" id="username" name="username" placeholder="Votre nom" required>
             </div>
             <div class="form-group">
-                <label for="email">Email :</label>
-                <input type="email" id="email" name="email" placeholder="Votre email" required>
-            </div>
-            <div class="form-group">
                 <label for="password">Mot de passe :</label>
                 <input type="password" id="password" name="password" required>
             </div>
@@ -80,13 +76,12 @@
             event.preventDefault(); // Empêche le rechargement de la page
 
             const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
 
             try {
                 // Interaction avec Supabase
                 const { data, error } = await supabase.auth.signUp({
-                    email: email,
+                    email: `${username}@placeholder.com`, // Utilise un email fictif basé sur le nom d'utilisateur
                     password: password,
                 }, {
                     data: { username: username } // Ajout du nom d'utilisateur dans les métadonnées
