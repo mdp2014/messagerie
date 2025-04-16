@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inscription avec Confettis</title>
+    <title>Inscription avec Supabase</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -65,21 +65,44 @@
         </form>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Ajouter la bibliothèque Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
     <script>
+        // Configuration Supabase
+        const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Gestion de l'inscription
         const form = document.getElementById('signupForm');
 
-        form.addEventListener('submit', function(event) {
+        form.addEventListener('submit', async function(event) {
             event.preventDefault(); // Empêche le rechargement de la page
 
-            // Affiche les confettis
-            confetti({
-                particleCount: 100,
-                spread: 70,
-                origin: { y: 0.6 }
-            });
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
 
-            alert("Inscription réussie !");
+            try {
+                // Interaction avec Supabase
+                const { data, error } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
+                }, {
+                    data: { username: username } // Ajout du nom d'utilisateur dans les métadonnées
+                });
+
+                if (error) {
+                    alert('Erreur lors de l\'inscription : ' + error.message);
+                    console.error(error);
+                } else {
+                    alert('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.');
+                    form.reset(); // Réinitialise le formulaire
+                }
+            } catch (err) {
+                console.error('Une erreur s\'est produite :', err);
+                alert('Une erreur s\'est produite. Veuillez réessayer.');
+            }
         });
     </script>
 </body>
