@@ -69,7 +69,7 @@
     <script>
         // Configuration Supabase
         const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Clé tronquée pour la sécurité
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...'; // Remplacez par votre clé complète
         const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         // Gestion de l'inscription
@@ -83,7 +83,7 @@
             try {
                 // Interaction avec Supabase
                 const { data, error } = await supabase.auth.signUp({
-                    email: `${username}@placeholder.com`, // Utilise un email fictif basé sur le nom d'utilisateur
+                    email: username + '@local', // Utilisation d'un email factice basé sur le nom d'utilisateur
                     password: password,
                 }, {
                     data: { username: username } // Ajout du nom d'utilisateur dans les métadonnées
@@ -93,7 +93,7 @@
                     alert('Erreur lors de l\'inscription : ' + error.message);
                     console.error(error);
                 } else {
-                    alert('Inscription réussie ! Vérifiez votre email pour confirmer votre compte.');
+                    alert('Inscription réussie !');
                     form.reset(); // Réinitialise le formulaire
 
                     // Lancer les confettis
