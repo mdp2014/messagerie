@@ -63,12 +63,14 @@
 
     <!-- Ajouter la bibliothèque canvas-confetti -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <!-- Ajouter la bibliothèque Supabase -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
 
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js">
-        
+    <script>
         // Configuration Supabase
         const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
-        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k'; 
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+        const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
         // Gestion de l'inscription
         const form = document.getElementById('signupForm');
@@ -80,10 +82,11 @@
 
             try {
                 const { data, error } = await supabase.auth.signUp({
-                    email: username + '@local',
+                    email: username + '@local', // Email fictif basé sur le username
                     password: password,
-                }, {
-                    data: { username: username }
+                    options: {
+                        data: { username: username } // Données supplémentaires
+                    }
                 });
 
                 if (error) {
