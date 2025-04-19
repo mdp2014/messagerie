@@ -1,5 +1,5 @@
 const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k'; // Remplacez par votre clé complète
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -84,8 +84,8 @@ async function sendMessage(userId, content) {
                 id_sent: userId,
                 user_id: userId,
                 content: content,
-                created_at: new Date().toISOString(), // Utiliser le format ISO 8601 correct
-                id_received: userSelect.value, // Utilisez l'ID de l'utilisateur sélectionné comme destinataire
+                created_at: new Date().toISOString(),
+                id_received: userSelect.value,
                 latitude: geolocation.latitude,
                 longitude: geolocation.longitude,
                 city: city
@@ -96,7 +96,7 @@ async function sendMessage(userId, content) {
             console.error('Error inserting message:', data);
         } else {
             console.log('Message inserted:', data);
-            getMessages(); // Rafraîchir les messages après l'insertion
+            getMessages();
         }
     } catch (error) {
         console.error('Error getting geolocation or city:', error);
@@ -116,19 +116,18 @@ async function deleteMessage(messageId) {
         console.error('Error deleting message:', await response.json());
     } else {
         console.log('Message deleted:', messageId);
-        getMessages(); // Rafraîchir les messages après la suppression
+        getMessages();
     }
 }
 
 // Fonction pour récupérer les messages via une requête GET
 async function getMessages() {
     if (!currentUserId || !userSelect.value) {
-        chatMessages.innerHTML = ''; // Masquer les messages si aucun utilisateur n'est connecté ou sélectionné
+        chatMessages.innerHTML = '';
         return;
     }
 
-    console.log('Fetching messages...');
-    const query = `${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`;
+    const query = `${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc`;
     const response = await fetch(query, {
         method: 'GET',
         headers: {
@@ -140,44 +139,13 @@ async function getMessages() {
     if (!response.ok) {
         console.error('Error fetching messages:', data);
     } else {
-        console.log('Messages fetched:', data);
-        chatMessages.innerHTML = ''; // Vider les messages affichés avant d'ajouter les nouveaux
-        let lastDate = null;
+        chatMessages.innerHTML = '';
         data.forEach(message => {
-            const messageDate = new Date(message.created_at).toLocaleDateString();
-            const messageTime = new Date(message.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const senderName = users[message.id_sent]?.username || 'Unknown'; // Récupérer le nom de l'utilisateur
-            const city = message.city ? ` (${message.city} - ${messageTime})` : '';
-
-            if (messageDate !== lastDate) {
-                const dateElement = document.createElement('div');
-                dateElement.textContent = messageDate;
-                dateElement.classList.add('date');
-                chatMessages.appendChild(dateElement);
-                lastDate = messageDate;
-            }
-
             const messageElement = document.createElement('div');
-            messageElement.textContent = `${senderName}${city}: ${message.content}`;
-            messageElement.classList.add('message');
-            if (message.id_sent === currentUserId) {
-                messageElement.classList.add('sent');
-                const deleteButton = document.createElement('span');
-                deleteButton.textContent = '✖';
-                deleteButton.classList.add('delete-button');
-                deleteButton.addEventListener('click', () => deleteMessage(message.id));
-                messageElement.appendChild(deleteButton);
-            } else {
-                messageElement.classList.add('received');
-            }
+            messageElement.textContent = `${message.content}`;
             chatMessages.appendChild(messageElement);
         });
     }
-}
-
-// Fonction pour rafraîchir les messages automatiquement
-function refreshMessages() {
-    setInterval(getMessages, 1500); // Rafraîchir les messages toutes les 0.5 secondes
 }
 
 // Fonction pour se connecter
@@ -190,11 +158,10 @@ function login() {
         if (user.password === '' || user.password === password) {
             currentUserId = user.id;
             alert('Connexion réussie');
-            loginContainer.style.display = 'none'; // Masquer le bloc de connexion
-            connectedUser.style.display = 'block'; // Afficher le message de l'utilisateur connecté
-            connectedUsername.textContent = user.username; // Afficher le nom de l'utilisateur connecté
+            loginContainer.style.display = 'none';
+            connectedUser.style.display = 'block';
+            connectedUsername.textContent = user.username;
             getMessages();
-            refreshMessages(); // Démarrer le rafraîchissement automatique des messages
         } else {
             alert('Mot de passe incorrect');
         }
@@ -206,40 +173,33 @@ function login() {
 // Fonction pour se déconnecter
 function logout() {
     currentUserId = null;
-    loginContainer.style.display = 'block'; // Afficher le bloc de connexion
-    connectedUser.style.display = 'none'; // Masquer le message de l'utilisateur connecté
-    chatMessages.innerHTML = ''; // Vider les messages affichés
+    loginContainer.style.display = 'block';
+    connectedUser.style.display = 'none';
+    chatMessages.innerHTML = '';
 }
 
-// Envoyer un message lorsque le bouton est cliqué
+// Envoyer un message
 sendButton.addEventListener('click', () => {
-    console.log('Button clicked');
     if (currentUserId) {
         const content = messageInput.value;
         if (content.trim() !== '') {
-            console.log('Sending message with content:', content);
             sendMessage(currentUserId, content);
             messageInput.value = '';
         } else {
-            console.log('Message content is empty');
+            alert('Message vide');
         }
     } else {
-        alert('Veuillez vous connecter pour envoyer un message');
+        alert('Veuillez vous connecter');
     }
 });
 
-// Se connecter lorsque le bouton est cliqué
+// Se connecter
 loginButton.addEventListener('click', login);
 
-// Se déconnecter lorsque le bouton est cliqué
+// Se déconnecter
 logoutButton.addEventListener('click', logout);
 
-// Charger les utilisateurs et les messages au chargement de la page
+// Charger les utilisateurs au chargement
 window.onload = () => {
-    getUsers().then(() => {
-        getMessages();
-    });
+    getUsers();
 };
-
-// Rafraîchir les messages lorsque l'utilisateur sélectionné change
-userSelect.addEventListener('change', getMessages);
