@@ -81,12 +81,11 @@
             const password = document.getElementById('password').value;
 
             try {
-                // Interaction avec Supabase
                 const { data, error } = await supabase.auth.signUp({
-                    email: username + '@local', // Utilisation d'un email factice basé sur le nom d'utilisateur
+                    email: username + '@local',
                     password: password,
                 }, {
-                    data: { username: username } // Ajout du nom d'utilisateur dans les métadonnées
+                    data: { username: username }
                 });
 
                 if (error) {
@@ -94,9 +93,8 @@
                     console.error(error);
                 } else {
                     alert('Inscription réussie !');
-                    form.reset(); // Réinitialise le formulaire
+                    form.reset();
 
-                    // Lancer les confettis
                     confetti({
                         particleCount: 100,
                         spread: 70,
