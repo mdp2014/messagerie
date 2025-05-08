@@ -2,78 +2,121 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inscription</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .container {
+      background-color: white;
+      padding: 20px 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      width: 300px;
+    }
+
+    h2 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      margin-bottom: 15px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .message {
+      text-align: center;
+      margin-top: 10px;
+      color: red;
+    }
+
+    .success {
+      color: green;
+    }
+  </style>
 </head>
 <body>
+
   <div class="container">
-    <h2 class="title">Inscription</h2>
-    <div class="field">
-      <label class="label" for="username">Nom d'utilisateur :</label>
-      <div class="control">
-        <input class="input" type="text" id="username" placeholder="Nom d'utilisateur" required>
-      </div>
-    </div>
-    <div class="field">
-      <label class="label" for="password">Mot de passe :</label>
-      <div class="control">
-        <input class="input" type="password" id="password" placeholder="Mot de passe" required>
-      </div>
-    </div>
-    <div class="field">
-      <label class="label" for="confirm-password">Confirmer le mot de passe :</label>
-      <div class="control">
-        <input class="input" type="password" id="confirm-password" placeholder="Confirmer le mot de passe" required>
-      </div>
-    </div>
-    <div class="field is-grouped">
-      <div class="control">
-        <button class="button is-primary" id="signup-button">Créer un compte</button>
-      </div>
-    </div>
-    <div id="error-message" class="error-message" style="display: none;"></div>
+    <h2>Créer un compte</h2>
+    <input type="text" id="username" placeholder="Nom d'utilisateur" required>
+    <input type="password" id="password" placeholder="Mot de passe" required>
+    <input type="password" id="confirm-password" placeholder="Confirmez le mot de passe" required>
+    <button onclick="register()">S'inscrire</button>
+    <div id="message" class="message"></div>
   </div>
 
-  <!-- Script avec clé API -->
-  <script type="text/javascript">
+  <script>
     const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
     const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
 
-    async function registerUser(username, password) {
+    async function register() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+      const message = document.getElementById('message');
+
+      message.textContent = '';
+      message.classList.remove('success');
+
+      if (!username || !password || !confirmPassword) {
+        message.textContent = 'Tous les champs sont requis.';
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        message.textContent = 'Les mots de passe ne correspondent pas.';
+        return;
+      }
+
       const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'return=representation'
         },
         body: JSON.stringify({
           username: username,
           password: password
         })
       });
-      const data = await response.json();
+
       if (response.ok) {
-        alert('Inscription réussie !');
-        console.log(data);
+        message.textContent = 'Compte créé avec succès !';
+        message.classList.add('success');
       } else {
-        alert('Erreur lors de l\'inscription.');
-        console.error(data);
+        const errorData = await response.json();
+        message.textContent = 'Erreur : ' + (errorData.message || 'Impossible de créer le compte.');
       }
     }
-
-    document.getElementById('signup-button').addEventListener('click', () => {
-      const username = document.getElementById('username').value;
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-
-      if (password !== confirmPassword) {
-        alert('Les mots de passe ne correspondent pas.');
-        return;
-      }
-
-      registerUser(username, password);
-    });
   </script>
+
 </body>
 </html>
