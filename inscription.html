@@ -1,12 +1,9 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Inscription</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.9.4/css/bulma.min.css">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.0/css/all.min.css">
-  <link rel="stylesheet" href="css/signup.css">
 </head>
 <body>
   <div class="container">
@@ -14,31 +11,69 @@
     <div class="field">
       <label class="label" for="username">Nom d'utilisateur :</label>
       <div class="control">
-        <input class="input" type="text" id="username" placeholder="Nom d'utilisateur" required />
+        <input class="input" type="text" id="username" placeholder="Nom d'utilisateur" required>
       </div>
+    </div>
     <div class="field">
       <label class="label" for="password">Mot de passe :</label>
       <div class="control">
-        <input class="input" type="password" id="password" placeholder="Mot de passe" required />
+        <input class="input" type="password" id="password" placeholder="Mot de passe" required>
       </div>
     </div>
     <div class="field">
       <label class="label" for="confirm-password">Confirmer le mot de passe :</label>
       <div class="control">
-        <input class="input" type="password" id="confirm-password" placeholder="Confirmer le mot de passe" required />
+        <input class="input" type="password" id="confirm-password" placeholder="Confirmer le mot de passe" required>
       </div>
     </div>
     <div class="field is-grouped">
       <div class="control">
         <button class="button is-primary" id="signup-button">Créer un compte</button>
       </div>
-      <div class="control">
-        <a href="https://mdp2014.github.io/messagerie/" class="button is-link">Déjà un compte ? Se connecter</a>
-      </div>
     </div>
     <div id="error-message" class="error-message" style="display: none;"></div>
   </div>
 
-  <script type="module" src="js/signup.js"></script>
+  <!-- Script avec clé API -->
+  <script type="text/javascript">
+    const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+
+    async function registerUser(username, password) {
+      const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`
+        },
+        body: JSON.stringify({
+          username: username,
+          password: password
+        })
+      });
+      const data = await response.json();
+      if (response.ok) {
+        alert('Inscription réussie !');
+        console.log(data);
+      } else {
+        alert('Erreur lors de l\'inscription.');
+        console.error(data);
+      }
+    }
+
+    document.getElementById('signup-button').addEventListener('click', () => {
+      const username = document.getElementById('username').value;
+      const password = document.getElementById('password').value;
+      const confirmPassword = document.getElementById('confirm-password').value;
+
+      if (password !== confirmPassword) {
+        alert('Les mots de passe ne correspondent pas.');
+        return;
+      }
+
+      registerUser(username, password);
+    });
+  </script>
 </body>
 </html>
