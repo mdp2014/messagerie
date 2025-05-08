@@ -109,7 +109,7 @@
       });
 
       if (response.ok) {
-        message.textContent = 'Compte créé avec succès!Attendez un peu vous allez être diriger vers le site';
+        message.textContent = 'Compte créé avec succès attendez un peu vous allez être diriger vers le site...';
         message.classList.add('success');
       } else {
         const errorData = await response.json();
