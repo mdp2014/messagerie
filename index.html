@@ -32,9 +32,39 @@
         </div>
         <div class="chat-input">
             <input type="text" id="message-input" placeholder="Tapez votre message...">
-            <button id="send-button">Envoyer</button>
+            <button id="send-button" onclick="animateMessage()">Envoyer</button>
         </div>
     </div>
+    <script>
+        // Fonction pour ajouter une animation lorsque le message est envoyé
+        function animateMessage() {
+            const chatMessages = document.getElementById('chat-messages');
+            const newMessage = document.createElement('div');
+            const messageInput = document.getElementById('message-input');
+
+            if (messageInput.value.trim() === "") {
+                alert("Veuillez écrire un message avant d'envoyer.");
+                return;
+            }
+
+            // Ajouter le contenu du message
+            newMessage.textContent = messageInput.value;
+            newMessage.classList.add('message', 'sent');
+            chatMessages.appendChild(newMessage);
+
+            // Réinitialiser le champ d'entrée
+            messageInput.value = "";
+
+            // Faire défiler vers le bas
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Animation de surbrillance temporaire
+            newMessage.classList.add('highlight');
+            setTimeout(() => {
+                newMessage.classList.remove('highlight');
+            }, 1000);
+        }
+    </script>
     <script src="app.js"></script>
 </body>
 </html>
