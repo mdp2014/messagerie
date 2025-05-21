@@ -1,5 +1,8 @@
+// --- CONFIGURATION SUPABASE ---
 const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+const emojis = ['👍', '😂', '❤️', '🔥', '👏', '😮', '😢', '😡', '🎉', '🙏'];
+
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -105,7 +108,89 @@ async function deleteMessage(messageId) {
   else console.error('Erreur suppression:', await response.json());
 }
 
-// Afficher messages
+// --- REACTIONS ---
+// Récupérer les réactions pour un message
+async function getReactions(messageId) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/reactions?select=emoji,user_id&id=eq.${messageId}`, {
+    method: 'GET',
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    }
+  });
+  if (!response.ok) return [];
+  return await response.json();
+}
+
+// Ajouter une réaction
+async function addReaction(messageId, userId, emoji) {
+  await fetch(`${supabaseUrl}/rest/v1/reactions`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    },
+    body: JSON.stringify({
+      message_id: messageId,
+      user_id: userId,
+      emoji
+    })
+  });
+}
+
+// Générer le bouton unique + menu emoji
+function renderReactions(reactions, messageId, userId) {
+  const container = document.createElement('div');
+  container.className = 'reaction-buttons';
+  // --- BOUTON UNIQUE ---
+  const triggerBtn = document.createElement('button');
+  triggerBtn.textContent = "😀";
+  triggerBtn.className = "trigger-emoji-btn";
+  triggerBtn.onclick = (e) => {
+    e.stopPropagation();
+    // Enlève le menu ouvert s'il existe déjà
+    const existingMenu = container.querySelector('.emoji-menu');
+    if(existingMenu) { existingMenu.remove(); return; }
+    // Crée le menu
+    const menu = document.createElement('div');
+    menu.className = 'emoji-menu';
+    emojis.forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.textContent = emoji;
+      btn.className = 'emoji-choice-btn';
+      btn.onclick = (ev) => {
+        ev.stopPropagation();
+        if (userId) addReaction(messageId, userId, emoji);
+        else alert("Connecte-toi pour réagir !");
+        menu.remove();
+      };
+      menu.appendChild(btn);
+    });
+    container.appendChild(menu);
+    // Ferme le menu si clic ailleurs
+    document.addEventListener('click', function closeMenuFn() {
+      if(menu) menu.remove();
+      document.removeEventListener('click', closeMenuFn);
+    });
+  };
+  container.appendChild(triggerBtn);
+
+  // --- Affiche les réactions déjà ajoutées (avec le compteur) ---
+  emojis.forEach(emoji => {
+    const count = reactions.filter(r => r.emoji === emoji).length;
+    if(count > 0) {
+      const span = document.createElement('span');
+      span.textContent = `${emoji} ${count}`;
+      span.className = "shown-reaction";
+      container.appendChild(span);
+    }
+  });
+
+  return container;
+}
+
+// Afficher messages (modifié pour intégrer les réactions)
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -124,7 +209,7 @@ async function getMessages() {
   if (response.ok) {
     chatMessages.innerHTML = '';
     let lastDate = null;
-    data.forEach(msg => {
+    for (const msg of data) {
       const msgDate = new Date(msg.created_at).toLocaleDateString();
       const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const sender = users[msg.id_sent]?.username || 'Inconnu';
@@ -151,8 +236,20 @@ async function getMessages() {
       } else {
         msgEl.classList.add('received');
       }
+
+      // --- REACTIONS ---
+      const reactionsDiv = document.createElement('div');
+      reactionsDiv.className = 'reactions';
+      getReactions(msg.id).then(reactions => {
+        const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
+        reactionsDiv.innerHTML = '';
+        reactionsDiv.appendChild(reactionsBtn);
+      });
+      msgEl.appendChild(reactionsDiv);
+      // --- FIN REACTIONS ---
+
       chatMessages.appendChild(msgEl);
-    });
+    }
   } else {
     console.error('Erreur chargement messages:', data);
   }
@@ -160,7 +257,7 @@ async function getMessages() {
 
 // Rafraîchissement automatique
 function refreshMessages() {
-  setInterval(getMessages, 1500);
+  //setInterval(getMessages, 1500);
 }
 
 // Connexion
