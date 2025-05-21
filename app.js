@@ -11,6 +11,7 @@ const loginContainer = document.getElementById('login-container');
 const connectedUser = document.getElementById('connected-user');
 const connectedUsername = document.getElementById('connected-username');
 const logoutButton = document.getElementById('logout-button');
+const emojis = ['👍', '😂', '❤️', '🔥', '👏', '😮', '😢', '😡', '🎉', '🙏'];
 
 let users = {};
 let currentUserId = null;
