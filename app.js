@@ -137,7 +137,6 @@ async function addReaction(messageId, userId, emoji) {
       emoji
     })
   });
-  getMessages();
 }
 
 // Générer le bouton unique + menu emoji
