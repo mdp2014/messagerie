@@ -1,7 +1,6 @@
 // --- CONFIGURATION SUPABASE ---
 const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
-// --- REACTIONS ---
 const emojis = ['👍', '😂', '❤️', '🔥', '👏', '😮', '😢', '😡', '🎉', '🙏'];
 
 const chatMessages = document.getElementById('chat-messages');
@@ -125,10 +124,6 @@ async function getReactions(messageId) {
 
 // Ajouter une réaction
 async function addReaction(messageId, userId, emoji) {
-  // Vérifier si l'utilisateur a déjà mis cette réaction (optionnel, à activer si tu veux empêcher le spam)
-  // const existing = await fetch(`${supabaseUrl}/rest/v1/reactions?emoji=eq.${encodeURIComponent(emoji)}&message_id=eq.${messageId}&user_id=eq.${userId}`, { ... });
-  // if ((await existing.json()).length > 0) return;
-
   await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
     headers: {
@@ -142,36 +137,59 @@ async function addReaction(messageId, userId, emoji) {
       emoji
     })
   });
-  // Rafraîchir les messages pour mettre à jour les réactions
   getMessages();
 }
 
-// Générer les boutons de réactions et l'affichage des compteurs
+// Générer le bouton unique + menu emoji
 function renderReactions(reactions, messageId, userId) {
   const container = document.createElement('div');
   container.className = 'reaction-buttons';
+  // --- BOUTON UNIQUE ---
+  const triggerBtn = document.createElement('button');
+  triggerBtn.textContent = "😀";
+  triggerBtn.className = "trigger-emoji-btn";
+  triggerBtn.onclick = (e) => {
+    e.stopPropagation();
+    // Enlève le menu ouvert s'il existe déjà
+    const existingMenu = container.querySelector('.emoji-menu');
+    if(existingMenu) { existingMenu.remove(); return; }
+    // Crée le menu
+    const menu = document.createElement('div');
+    menu.className = 'emoji-menu';
+    emojis.forEach(emoji => {
+      const btn = document.createElement('button');
+      btn.textContent = emoji;
+      btn.className = 'emoji-choice-btn';
+      btn.onclick = (ev) => {
+        ev.stopPropagation();
+        if (userId) addReaction(messageId, userId, emoji);
+        else alert("Connecte-toi pour réagir !");
+        menu.remove();
+      };
+      menu.appendChild(btn);
+    });
+    container.appendChild(menu);
+    // Ferme le menu si clic ailleurs
+    document.addEventListener('click', function closeMenuFn() {
+      if(menu) menu.remove();
+      document.removeEventListener('click', closeMenuFn);
+    });
+  };
+  container.appendChild(triggerBtn);
+
+  // --- Affiche les réactions déjà ajoutées (avec le compteur) ---
   emojis.forEach(emoji => {
-    // Compter le nombre de fois que cet emoji a été utilisé pour ce message
     const count = reactions.filter(r => r.emoji === emoji).length;
-    // Vérifier si l'utilisateur a déjà réagi avec cet emoji (optionnel)
-    const userReacted = reactions.some(r => r.emoji === emoji && r.user_id === userId);
-
-    const btn = document.createElement('button');
-    btn.textContent = emoji + (count > 0 ? ` ${count}` : '');
-    btn.disabled = !userId; // Désactiver si pas connecté
-
-    // Optionnel : style si déjà réagi
-    if (userReacted) btn.style.backgroundColor = "#e8e8e8";
-
-    btn.onclick = () => {
-      if (userId) addReaction(messageId, userId, emoji);
-      else alert("Connecte-toi pour réagir !");
-    };
-    container.appendChild(btn);
+    if(count > 0) {
+      const span = document.createElement('span');
+      span.textContent = `${emoji} ${count}`;
+      span.className = "shown-reaction";
+      container.appendChild(span);
+    }
   });
+
   return container;
 }
-// --- FIN REACTIONS ---
 
 // Afficher messages (modifié pour intégrer les réactions)
 async function getMessages() {
@@ -192,10 +210,6 @@ async function getMessages() {
   if (response.ok) {
     chatMessages.innerHTML = '';
     let lastDate = null;
-    // --- REACTIONS --- On charge toutes les réactions d'un coup pour optimiser (facultatif)
-    // const reactionsAll = await fetch(`${supabaseUrl}/rest/v1/reactions?select=emoji,user_id,message_id`, { ... });
-    // const reactionsData = reactionsAll.ok ? await reactionsAll.json() : [];
-    // --- FIN facultatif
     for (const msg of data) {
       const msgDate = new Date(msg.created_at).toLocaleDateString();
       const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -224,10 +238,9 @@ async function getMessages() {
         msgEl.classList.add('received');
       }
 
-      // --- REACTIONS --- Ajout des boutons de réactions
+      // --- REACTIONS ---
       const reactionsDiv = document.createElement('div');
       reactionsDiv.className = 'reactions';
-      // Récupérer puis afficher les réactions pour ce message
       getReactions(msg.id).then(reactions => {
         const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
         reactionsDiv.innerHTML = '';
