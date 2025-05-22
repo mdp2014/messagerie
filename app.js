@@ -257,7 +257,7 @@ async function getMessages() {
 
 // Rafraîchissement automatique
 function refreshMessages() {
-  //setInterval(getMessages, 1500);
+ setInterval(getMessages, 1500);
 }
 
 // Connexion
