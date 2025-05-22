@@ -122,7 +122,24 @@ async function getReactions(messageId) {
   return await response.json();
 }
 
-// Ajouter une réaction
+// Rafraîchir les réactions d'un seul message
+async function refreshReactionsForMessage(messageId, userId) {
+  // Trouve la div .reactions associée au message
+  const msgDiv = [...document.getElementsByClassName('message')].find(div => {
+    return div.dataset && div.dataset.messageId == messageId;
+  });
+  if (msgDiv) {
+    const reactionsDiv = msgDiv.querySelector('.reactions');
+    if (reactionsDiv) {
+      const reactions = await getReactions(messageId);
+      const reactionsBtn = renderReactions(reactions, messageId, userId);
+      reactionsDiv.innerHTML = '';
+      reactionsDiv.appendChild(reactionsBtn);
+    }
+  }
+}
+
+// Ajouter une réaction (corrigé)
 async function addReaction(messageId, userId, emoji) {
   await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
@@ -137,6 +154,7 @@ async function addReaction(messageId, userId, emoji) {
       emoji
     })
   });
+  refreshReactionsForMessage(messageId, userId);
 }
 
 // Générer le bouton unique + menu emoji
@@ -226,6 +244,8 @@ async function getMessages() {
       const msgEl = document.createElement('div');
       msgEl.textContent = `${sender}${city}: ${msg.content}`;
       msgEl.classList.add('message');
+      msgEl.dataset.messageId = msg.id; // IMPORTANT : pour retrouver le message lors du refresh de réactions
+
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
         const delBtn = document.createElement('span');
@@ -250,14 +270,16 @@ async function getMessages() {
 
       chatMessages.appendChild(msgEl);
     }
+    // Scroll en bas à chaque nouveau message/affichage
+    chatMessages.scrollTop = chatMessages.scrollHeight;
   } else {
     console.error('Erreur chargement messages:', data);
   }
 }
 
-// Rafraîchissement automatique
+// Rafraîchissement automatique (optionnel : tu peux commenter cette ligne si tu veux éviter le refresh global régulier)
 function refreshMessages() {
- setInterval(getMessages, 1500);
+  // setInterval(getMessages, 1500);
 }
 
 // Connexion
@@ -302,50 +324,10 @@ sendButton.addEventListener('click', () => {
 
 loginButton.addEventListener('click', login);
 logoutButton.addEventListener('click', logout);
+userSelect.addEventListener('change', getMessages);
 
 window.onload = () => {
   getUsers().then(() => {
     getMessages();
   });
 };
-
-userSelect.addEventListener('change', getMessages);
-
-// 🔐 Système d'inscription
-document.getElementById('signup-button').addEventListener('click', async () => {
-  const username = document.getElementById('signup-username').value.trim();
-  const password = document.getElementById('signup-password').value;
-  const confirmPassword = document.getElementById('signup-confirm-password').value;
-
-  if (!username || !password || !confirmPassword) {
-    alert("Tous les champs sont requis.");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    alert("Les mots de passe ne correspondent pas.");
-    return;
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
-      'Prefer': 'return=representation'
-    },
-    body: JSON.stringify({ username, password })
-  });
-
-  if (response.ok) {
-    alert("Compte créé !");
-    document.getElementById('signup-username').value = '';
-    document.getElementById('signup-password').value = '';
-    document.getElementById('signup-confirm-password').value = '';
-    await getUsers();
-  } else {
-    const errorData = await response.json();
-    alert("Erreur : " + (errorData.message || "Impossible de créer le compte."));
-  }
-});
