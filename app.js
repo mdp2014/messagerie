@@ -244,7 +244,7 @@ async function getMessages() {
       const msgEl = document.createElement('div');
       msgEl.textContent = `${sender}${city}: ${msg.content}`;
       msgEl.classList.add('message');
-      msgEl.dataset.messageId = msg.id; // IMPORTANT : pour retrouver le message lors du refresh de réactions
+      msgEl.dataset.messageId = msg.id; // Pour retrouver ce message lors du refresh des réactions
 
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
@@ -277,10 +277,27 @@ async function getMessages() {
   }
 }
 
-// Rafraîchissement automatique (optionnel : tu peux commenter cette ligne si tu veux éviter le refresh global régulier)
-function refreshMessages() {
-  // setInterval(getMessages, 1500);
+// --- ACTUALISATION CACHÉE DES RÉACTIONS ---
+function refreshAllReactionsInBackground() {
+  const messageDivs = document.querySelectorAll('.message');
+  messageDivs.forEach(msgDiv => {
+    const messageId = msgDiv.dataset.messageId;
+    const reactionsDiv = msgDiv.querySelector('.reactions');
+    if (messageId && reactionsDiv) {
+      getReactions(messageId).then(reactions => {
+        const reactionsBtn = renderReactions(reactions, messageId, currentUserId);
+        reactionsDiv.innerHTML = '';
+        reactionsDiv.appendChild(reactionsBtn);
+      });
+    }
+  });
 }
+setInterval(refreshAllReactionsInBackground, 2000); // Toutes les 2 secondes
+
+// Rafraîchissement automatique global désactivé (optionnel)
+// function refreshMessages() {
+//   setInterval(getMessages, 1500);
+// }
 
 // Connexion
 function login() {
@@ -296,7 +313,7 @@ function login() {
       connectedUser.style.display = 'block';
       connectedUsername.textContent = user.username;
       getMessages();
-      refreshMessages();
+      // refreshMessages();
     } else alert('Mot de passe incorrect');
   } else alert('Utilisateur introuvable');
 }
