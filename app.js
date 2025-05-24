@@ -124,7 +124,6 @@ async function getReactions(messageId) {
 
 // Rafraîchir les réactions d'un seul message
 async function refreshReactionsForMessage(messageId, userId) {
-  // Trouve la div .reactions associée au message
   const msgDiv = [...document.getElementsByClassName('message')].find(div => {
     return div.dataset && div.dataset.messageId == messageId;
   });
@@ -139,9 +138,9 @@ async function refreshReactionsForMessage(messageId, userId) {
   }
 }
 
-// Ajouter une réaction (corrigé)
+// Ajouter une réaction (avec gestion d’erreur)
 async function addReaction(messageId, userId, emoji) {
-  await fetch(`${supabaseUrl}/rest/v1/reactions`, {
+  const res = await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -154,6 +153,11 @@ async function addReaction(messageId, userId, emoji) {
       emoji
     })
   });
+  const data = await res.json();
+  if (!res.ok) {
+    console.error('Erreur Supabase:', data);
+    alert('Erreur lors de l\'enregistrement de la réaction');
+  }
   refreshReactionsForMessage(messageId, userId);
 }
 
@@ -244,7 +248,7 @@ async function getMessages() {
       const msgEl = document.createElement('div');
       msgEl.textContent = `${sender}${city}: ${msg.content}`;
       msgEl.classList.add('message');
-      msgEl.dataset.messageId = msg.id; // Pour retrouver ce message lors du refresh des réactions
+      msgEl.dataset.messageId = msg.id;
 
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
@@ -270,7 +274,6 @@ async function getMessages() {
 
       chatMessages.appendChild(msgEl);
     }
-    // Scroll en bas à chaque nouveau message/affichage
     chatMessages.scrollTop = chatMessages.scrollHeight;
   } else {
     console.error('Erreur chargement messages:', data);
@@ -292,12 +295,7 @@ function refreshAllReactionsInBackground() {
     }
   });
 }
-setInterval(refreshAllReactionsInBackground, 2000); // Toutes les 2 secondes
-
-// Rafraîchissement automatique global désactivé (optionnel)
-// function refreshMessages() {
-//   setInterval(getMessages, 1500);
-// }
+setInterval(refreshAllReactionsInBackground, 2000);
 
 // Connexion
 function login() {
@@ -313,7 +311,6 @@ function login() {
       connectedUser.style.display = 'block';
       connectedUsername.textContent = user.username;
       getMessages();
-      // refreshMessages();
     } else alert('Mot de passe incorrect');
   } else alert('Utilisateur introuvable');
 }
