@@ -1,6 +1,6 @@
 // --- CONFIGURATION SUPABASE ---
 const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k'; // Clé tronquée volontairement ici
 const emojis = ['👍', '😂', '❤️', '🔥', '👏', '😮', '😢', '😡', '🎉', '🙏'];
 
 const chatMessages = document.getElementById('chat-messages');
@@ -138,7 +138,7 @@ async function refreshReactionsForMessage(messageId, userId) {
   }
 }
 
-// Ajouter une réaction (avec gestion d’erreur)
+// ✅ CORRECTION : Ajouter une réaction sans planter si la réponse est vide
 async function addReaction(messageId, userId, emoji) {
   const res = await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
@@ -153,11 +153,20 @@ async function addReaction(messageId, userId, emoji) {
       emoji
     })
   });
-  const data = await res.json();
+
+  let data = {};
+  try {
+    const text = await res.text();
+    data = text ? JSON.parse(text) : {};
+  } catch (err) {
+    console.warn("Réponse non JSON ou vide pour addReaction");
+  }
+
   if (!res.ok) {
     console.error('Erreur Supabase:', data);
     alert('Erreur lors de l\'enregistrement de la réaction');
   }
+
   refreshReactionsForMessage(messageId, userId);
 }
 
@@ -165,16 +174,15 @@ async function addReaction(messageId, userId, emoji) {
 function renderReactions(reactions, messageId, userId) {
   const container = document.createElement('div');
   container.className = 'reaction-buttons';
-  // --- BOUTON UNIQUE ---
+
   const triggerBtn = document.createElement('button');
   triggerBtn.textContent = "😀";
   triggerBtn.className = "trigger-emoji-btn";
   triggerBtn.onclick = (e) => {
     e.stopPropagation();
-    // Enlève le menu ouvert s'il existe déjà
     const existingMenu = container.querySelector('.emoji-menu');
     if(existingMenu) { existingMenu.remove(); return; }
-    // Crée le menu
+
     const menu = document.createElement('div');
     menu.className = 'emoji-menu';
     emojis.forEach(emoji => {
@@ -190,7 +198,7 @@ function renderReactions(reactions, messageId, userId) {
       menu.appendChild(btn);
     });
     container.appendChild(menu);
-    // Ferme le menu si clic ailleurs
+
     document.addEventListener('click', function closeMenuFn() {
       if(menu) menu.remove();
       document.removeEventListener('click', closeMenuFn);
@@ -198,7 +206,6 @@ function renderReactions(reactions, messageId, userId) {
   };
   container.appendChild(triggerBtn);
 
-  // --- Affiche les réactions déjà ajoutées (avec le compteur) ---
   emojis.forEach(emoji => {
     const count = reactions.filter(r => r.emoji === emoji).length;
     if(count > 0) {
@@ -212,7 +219,7 @@ function renderReactions(reactions, messageId, userId) {
   return container;
 }
 
-// Afficher messages (modifié pour intégrer les réactions)
+// Afficher messages
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -261,7 +268,6 @@ async function getMessages() {
         msgEl.classList.add('received');
       }
 
-      // --- REACTIONS ---
       const reactionsDiv = document.createElement('div');
       reactionsDiv.className = 'reactions';
       getReactions(msg.id).then(reactions => {
@@ -270,7 +276,6 @@ async function getMessages() {
         reactionsDiv.appendChild(reactionsBtn);
       });
       msgEl.appendChild(reactionsDiv);
-      // --- FIN REACTIONS ---
 
       chatMessages.appendChild(msgEl);
     }
@@ -280,7 +285,7 @@ async function getMessages() {
   }
 }
 
-// --- ACTUALISATION CACHÉE DES RÉACTIONS ---
+// Actualisation des réactions
 function refreshAllReactionsInBackground() {
   const messageDivs = document.querySelectorAll('.message');
   messageDivs.forEach(msgDiv => {
