@@ -228,3 +228,37 @@ body {
   padding: 1px 6px;
   border: 1px solid #eee;
 }
+.bouton-envoyer {
+  background: linear-gradient(270deg, #ff00cc, #3333ff, #00ffcc, #ffcc00, #ff00cc);
+  background-size: 1000% 1000%;
+  color: #fff;
+  border: none;
+  padding: 12px 32px;
+  border-radius: 30px;
+  font-size: 1.1em;
+  cursor: pointer;
+  transition: box-shadow 0.3s;
+  animation: degrade-multicolore 4s linear infinite;
+}
+
+@keyframes degrade-multicolore {
+  0% { background-position: 0% 50%;}
+  100% { background-position: 100% 50%;}
+}
+
+.titre-messagerie {
+  font-size: 2.5em;
+  font-weight: bold;
+  background: linear-gradient(90deg, #2196f3, #21cbf3, #2196f3);
+  background-size: 200% auto;
+  color: transparent;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: titre-degrade-bleu 3s linear infinite;
+}
+
+@keyframes titre-degrade-bleu {
+  0% { background-position: 0% 50%;}
+  100% { background-position: 100% 50%;}
+}
