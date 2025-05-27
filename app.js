@@ -88,11 +88,58 @@ async function sendMessage(userId, content) {
     });
 
     const data = await response.json();
-    if (!response.ok) console.error('Erreur message:', data);
-    else getMessages();
+    if (!response.ok) {
+      console.error('Erreur message:', data);
+    } else {
+      // Affiche immédiatement le message envoyé
+      renderSingleMessage(data[0]);
+    }
   } catch (e) {
     console.error('Erreur géoloc:', e);
   }
+}
+
+// Affiche un seul message dans la fenêtre de chat
+async function renderSingleMessage(msg) {
+  const msgDate = new Date(msg.created_at).toLocaleDateString();
+  const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const sender = users[msg.id_sent]?.username || 'Inconnu';
+  const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
+
+  // Ajoute la date si elle n'existe pas encore
+  const existingDates = [...chatMessages.querySelectorAll('.date')].map(el => el.textContent);
+  if (!existingDates.includes(msgDate)) {
+    const dateEl = document.createElement('div');
+    dateEl.textContent = msgDate;
+    dateEl.classList.add('date');
+    chatMessages.appendChild(dateEl);
+  }
+
+  const msgEl = document.createElement('div');
+  msgEl.textContent = `${sender}${city}: ${msg.content}`;
+  msgEl.classList.add('message');
+  msgEl.dataset.messageId = msg.id;
+
+  if (msg.id_sent === currentUserId) {
+    msgEl.classList.add('sent');
+    const delBtn = document.createElement('span');
+    delBtn.textContent = '✖';
+    delBtn.classList.add('delete-button');
+    delBtn.onclick = () => deleteMessage(msg.id);
+    msgEl.appendChild(delBtn);
+  } else {
+    msgEl.classList.add('received');
+  }
+
+  const reactionsDiv = document.createElement('div');
+  reactionsDiv.className = 'reactions';
+  const reactions = await getReactions(msg.id);
+  const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
+  reactionsDiv.appendChild(reactionsBtn);
+  msgEl.appendChild(reactionsDiv);
+
+  chatMessages.appendChild(msgEl);
+  chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
 // Supprimer message
@@ -138,7 +185,7 @@ async function refreshReactionsForMessage(messageId, userId) {
   }
 }
 
-// Ajouter une réaction (modifié pour tout rafraîchir)
+// Ajouter une réaction (rafraîchit localement sans recharger tout)
 async function addReaction(messageId, userId, emoji) {
   const res = await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
@@ -157,8 +204,9 @@ async function addReaction(messageId, userId, emoji) {
   if (!res.ok) {
     console.error('Erreur Supabase:', data);
     alert('Erreur lors de l\'enregistrement de la réaction');
+  } else {
+    refreshReactionsForMessage(messageId, userId);
   }
-  getMessages(); // recharge tout
 }
 
 // Générer le bouton unique + menu emoji
@@ -171,10 +219,8 @@ function renderReactions(reactions, messageId, userId) {
   triggerBtn.className = "trigger-emoji-btn";
   triggerBtn.onclick = (e) => {
     e.stopPropagation();
-    // Enlève le menu ouvert s'il existe déjà
     const existingMenu = container.querySelector('.emoji-menu');
     if(existingMenu) { existingMenu.remove(); return; }
-    // Crée le menu
     const menu = document.createElement('div');
     menu.className = 'emoji-menu';
     emojis.forEach(emoji => {
@@ -190,7 +236,6 @@ function renderReactions(reactions, messageId, userId) {
       menu.appendChild(btn);
     });
     container.appendChild(menu);
-    // Ferme le menu si clic ailleurs
     document.addEventListener('click', function closeMenuFn() {
       if(menu) menu.remove();
       document.removeEventListener('click', closeMenuFn);
@@ -212,7 +257,7 @@ function renderReactions(reactions, messageId, userId) {
   return container;
 }
 
-// Afficher messages (modifié pour intégrer les réactions)
+// Afficher messages (intègre les réactions)
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -261,16 +306,12 @@ async function getMessages() {
         msgEl.classList.add('received');
       }
 
-      // --- REACTIONS ---
       const reactionsDiv = document.createElement('div');
       reactionsDiv.className = 'reactions';
-      getReactions(msg.id).then(reactions => {
-        const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
-        reactionsDiv.innerHTML = '';
-        reactionsDiv.appendChild(reactionsBtn);
-      });
+      const reactions = await getReactions(msg.id);
+      const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
+      reactionsDiv.appendChild(reactionsBtn);
       msgEl.appendChild(reactionsDiv);
-      // --- FIN REACTIONS ---
 
       chatMessages.appendChild(msgEl);
     }
@@ -286,62 +327,59 @@ function refreshAllReactionsInBackground() {
   messageDivs.forEach(msgDiv => {
     const messageId = msgDiv.dataset.messageId;
     const reactionsDiv = msgDiv.querySelector('.reactions');
-    if (messageId && reactionsDiv) {
+    if(reactionsDiv && messageId) {
       getReactions(messageId).then(reactions => {
-        const reactionsBtn = renderReactions(reactions, messageId, currentUserId);
+        const newReactionsBtn = renderReactions(reactions, messageId, currentUserId);
         reactionsDiv.innerHTML = '';
-        reactionsDiv.appendChild(reactionsBtn);
+        reactionsDiv.appendChild(newReactionsBtn);
       });
     }
   });
 }
-setInterval(refreshAllReactionsInBackground, 2000);
 
-// Connexion
-function login() {
-  const username = loginUsername.value;
-  const password = loginPassword.value;
-  const user = Object.values(users).find(u => u.username === username);
-
-  if (user) {
-    if (user.password === '' || user.password === password) {
-      currentUserId = user.id;
-      alert('Connecté !');
-      loginContainer.style.display = 'none';
-      connectedUser.style.display = 'block';
-      connectedUsername.textContent = user.username;
-      getMessages();
-    } else alert('Mot de passe incorrect');
-  } else alert('Utilisateur introuvable');
+// --- GESTION CONNEXION ---
+async function login(username, password) {
+  await getUsers();
+  const found = Object.values(users).find(u => u.username === username && u.password === password);
+  if (found) {
+    currentUserId = found.id;
+    loginContainer.style.display = 'none';
+    connectedUser.style.display = 'block';
+    connectedUsername.textContent = username;
+    messageInput.disabled = false;
+    sendButton.disabled = false;
+    await getMessages();
+    setInterval(refreshAllReactionsInBackground, 10000);
+  } else {
+    alert('Identifiants invalides');
+  }
 }
 
-// Déconnexion
 function logout() {
   currentUserId = null;
   loginContainer.style.display = 'block';
   connectedUser.style.display = 'none';
+  messageInput.disabled = true;
+  sendButton.disabled = true;
   chatMessages.innerHTML = '';
 }
 
-// Événements
-sendButton.addEventListener('click', () => {
-  if (currentUserId) {
-    const content = messageInput.value.trim();
-    if (content) {
-      sendMessage(currentUserId, content);
-      messageInput.value = '';
-    }
-  } else {
-    alert('Connectez-vous pour envoyer un message');
+loginButton.onclick = () => login(loginUsername.value, loginPassword.value);
+logoutButton.onclick = logout;
+
+sendButton.onclick = async () => {
+  const content = messageInput.value.trim();
+  if (content.length > 0) {
+    await sendMessage(currentUserId, content);
+    messageInput.value = '';
   }
-});
-
-loginButton.addEventListener('click', login);
-logoutButton.addEventListener('click', logout);
-userSelect.addEventListener('change', getMessages);
-
-window.onload = () => {
-  getUsers().then(() => {
-    getMessages();
-  });
 };
+
+userSelect.onchange = () => getMessages();
+
+// --- Initialisation ---
+(async () => {
+  await getUsers();
+  messageInput.disabled = true;
+  sendButton.disabled = true;
+})();
