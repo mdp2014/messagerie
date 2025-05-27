@@ -138,7 +138,7 @@ async function refreshReactionsForMessage(messageId, userId) {
   }
 }
 
-// Ajouter une réaction (avec gestion d’erreur)
+// Ajouter une réaction (modifié pour tout rafraîchir)
 async function addReaction(messageId, userId, emoji) {
   const res = await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
@@ -158,7 +158,7 @@ async function addReaction(messageId, userId, emoji) {
     console.error('Erreur Supabase:', data);
     alert('Erreur lors de l\'enregistrement de la réaction');
   }
-  refreshReactionsForMessage(messageId, userId);
+  getMessages(); // recharge tout
 }
 
 // Générer le bouton unique + menu emoji
