@@ -66,8 +66,20 @@ async function getCityFromCoordinates(latitude, longitude) {
 // Envoi message
 async function sendMessage(userId, content) {
   try {
-    const geo = await getGeolocation();
-    const city = await getCityFromCoordinates(geo.latitude, geo.longitude);
+       let latitude = null, longitude = null, city = 'Inconnue';
+
+    try {
+    let latitude = null, longitude = null, city = 'Inconnue';
+
+    try {
+      const geo = await getGeolocation();
+      latitude = geo.latitude;
+      longitude = geo.longitude;
+      city = await getCityFromCoordinates(latitude, longitude);
+    } catch (e) {
+      console.warn("Géolocalisation impossible :", e.message);
+    }
+
     const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
       method: 'POST',
       headers: {
@@ -81,11 +93,13 @@ async function sendMessage(userId, content) {
         content,
         created_at: new Date().toISOString(),
         id_received: userSelect.value,
-        latitude: geo.latitude,
-        longitude: geo.longitude,
+        latitude,
+        longitude,
         city
       })
     });
+
+
 
     const data = await response.json();
     if (!response.ok) {
