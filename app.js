@@ -67,7 +67,6 @@ async function getCityFromCoordinates(latitude, longitude) {
 async function sendMessage(userId, content) {
   try {
        let latitude = null, longitude = null, city = 'Inconnue';
-    try {
       const geo = await getGeolocation();
       latitude = geo.latitude;
       longitude = geo.longitude;
