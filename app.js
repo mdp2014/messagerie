@@ -64,6 +64,7 @@ async function getCityFromCoordinates(latitude, longitude) {
 
 // --- ENVOYER UN MESSAGE ---
 async function sendMessage(userId, content) {
+  console.log('Envoi du message:', content);
   let latitude = null, longitude = null, city = 'Inconnue';
   try {
     const geo = await getGeolocation();
@@ -95,7 +96,8 @@ async function sendMessage(userId, content) {
   if (!response.ok) {
     console.error('Erreur message:', data);
   } else {
-    renderSingleMessage(data);
+    console.log('Message envoyé avec succès:', data);
+    await renderSingleMessage(data);
   }
 }
 
