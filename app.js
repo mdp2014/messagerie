@@ -3,6 +3,7 @@ const supabaseUrl = 'https://sqnjzcqcmtjhbptjlixe.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbmp6Y3FjbXRqaGJwdGpsaXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTY1ODcsImV4cCI6MjA2NDA5MjU4N30.lJIsRndHSS95pxJrH726jDaHANTaj_Q14IoZ4JNm-Rg';
 const emojis = ['👍', '😂', '❤️', '🔥', '👏', '😮', '😢', '😡', '🎉', '🙏'];
 
+// --- RÉFÉRENCES HTML ---
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -18,10 +19,9 @@ const logoutButton = document.getElementById('logout-button');
 let users = {};
 let currentUserId = null;
 
-// Charger utilisateurs
+// --- CHARGER LES UTILISATEURS ---
 async function getUsers() {
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -42,18 +42,17 @@ async function getUsers() {
   }
 }
 
-// Géolocalisation
+// --- GÉOLOCALISATION ---
 function getGeolocation() {
   return new Promise((resolve, reject) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => resolve({
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude
-        }),
+        pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
         reject
       );
-    } else reject(new Error('Non supporté'));
+    } else {
+      reject(new Error('Non supporté'));
+    }
   });
 }
 
@@ -63,59 +62,50 @@ async function getCityFromCoordinates(latitude, longitude) {
   return data.address.city || data.address.town || data.address.village || 'Inconnue';
 }
 
-// Envoi message
+// --- ENVOYER UN MESSAGE ---
 async function sendMessage(userId, content) {
- let latitude = null, longitude = null, city = 'Inconnue';
- try{
+  let latitude = null, longitude = null, city = 'Inconnue';
+  try {
     const geo = await getGeolocation();
-      latitude = geo.latitude;
-      longitude = geo.longitude;
-      city = await getCityFromCoordinates(latitude, longitude);
-    } catch (e) {
-      console.warn("Géolocalisation impossible :", e.message);
-    }
-
-    const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
-      },
-      body: JSON.stringify({
-        id_sent: userId,
-        user_id: userId,
-        content,
-        created_at: new Date().toISOString(),
-        id_received: userSelect.value,
-        latitude,
-        longitude,
-        city
-      })
-    });
-
-
-
-    const data = await response.json();
-    if (!response.ok) {
-      console.error('Erreur message:', data);
-    } else {
-      // Affiche immédiatement le message envoyé
-      renderSingleMessage(data[0]);
-    }
+    latitude = geo.latitude;
+    longitude = geo.longitude;
+    city = await getCityFromCoordinates(latitude, longitude);
   } catch (e) {
-    console.error('Erreur géoloc:', e);
+    console.warn("Géolocalisation impossible :", e.message);
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    },
+    body: JSON.stringify({
+      id_sent: userId,
+      id_received: userSelect.value,
+      content,
+      latitude,
+      longitude,
+      city
+    })
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    console.error('Erreur message:', data);
+  } else {
+    renderSingleMessage(data);
   }
 }
 
-// Affiche un seul message dans la fenêtre de chat
+// --- AFFICHER UN MESSAGE ---
 async function renderSingleMessage(msg) {
   const msgDate = new Date(msg.created_at).toLocaleDateString();
   const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   const sender = users[msg.id_sent]?.username || 'Inconnu';
-  const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
+  const cityInfo = msg.city ? ` (${msg.city} - ${msgTime})` : '';
 
-  // Ajoute la date si elle n'existe pas encore
   const existingDates = [...chatMessages.querySelectorAll('.date')].map(el => el.textContent);
   if (!existingDates.includes(msgDate)) {
     const dateEl = document.createElement('div');
@@ -125,7 +115,7 @@ async function renderSingleMessage(msg) {
   }
 
   const msgEl = document.createElement('div');
-  msgEl.textContent = `${sender}${city}: ${msg.content}`;
+  msgEl.textContent = `${sender}${cityInfo}: ${msg.content}`;
   msgEl.classList.add('message');
   msgEl.dataset.messageId = msg.id;
 
@@ -151,7 +141,7 @@ async function renderSingleMessage(msg) {
   chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
-// Supprimer message
+// --- SUPPRIMER UN MESSAGE ---
 async function deleteMessage(messageId) {
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?id=eq.${messageId}`, {
     method: 'DELETE',
@@ -164,11 +154,9 @@ async function deleteMessage(messageId) {
   else console.error('Erreur suppression:', await response.json());
 }
 
-// --- REACTIONS ---
-// Récupérer les réactions pour un message
+// --- RÉACTIONS ---
 async function getReactions(messageId) {
   const response = await fetch(`${supabaseUrl}/rest/v1/reactions?select=emoji,user_id&id=eq.${messageId}`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -178,11 +166,8 @@ async function getReactions(messageId) {
   return await response.json();
 }
 
-// Rafraîchir les réactions d'un seul message
 async function refreshReactionsForMessage(messageId, userId) {
-  const msgDiv = [...document.getElementsByClassName('message')].find(div => {
-    return div.dataset && div.dataset.messageId == messageId;
-  });
+  const msgDiv = [...document.getElementsByClassName('message')].find(div => div.dataset.messageId == messageId);
   if (msgDiv) {
     const reactionsDiv = msgDiv.querySelector('.reactions');
     if (reactionsDiv) {
@@ -194,7 +179,6 @@ async function refreshReactionsForMessage(messageId, userId) {
   }
 }
 
-// Ajouter une réaction (rafraîchit localement sans recharger tout)
 async function addReaction(messageId, userId, emoji) {
   const res = await fetch(`${supabaseUrl}/rest/v1/reactions`, {
     method: 'POST',
@@ -203,11 +187,7 @@ async function addReaction(messageId, userId, emoji) {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
     },
-    body: JSON.stringify({
-      message_id: messageId,
-      user_id: userId,
-      emoji
-    })
+    body: JSON.stringify({ message_id: messageId, user_id: userId, emoji })
   });
   const data = await res.json();
   if (!res.ok) {
@@ -218,18 +198,18 @@ async function addReaction(messageId, userId, emoji) {
   }
 }
 
-// Générer le bouton unique + menu emoji
 function renderReactions(reactions, messageId, userId) {
   const container = document.createElement('div');
   container.className = 'reaction-buttons';
-  // --- BOUTON UNIQUE ---
+
   const triggerBtn = document.createElement('button');
   triggerBtn.textContent = "😀";
   triggerBtn.className = "trigger-emoji-btn";
   triggerBtn.onclick = (e) => {
     e.stopPropagation();
     const existingMenu = container.querySelector('.emoji-menu');
-    if(existingMenu) { existingMenu.remove(); return; }
+    if (existingMenu) return existingMenu.remove();
+
     const menu = document.createElement('div');
     menu.className = 'emoji-menu';
     emojis.forEach(emoji => {
@@ -245,17 +225,17 @@ function renderReactions(reactions, messageId, userId) {
       menu.appendChild(btn);
     });
     container.appendChild(menu);
+
     document.addEventListener('click', function closeMenuFn() {
-      if(menu) menu.remove();
+      menu.remove();
       document.removeEventListener('click', closeMenuFn);
     });
   };
   container.appendChild(triggerBtn);
 
-  // --- Affiche les réactions déjà ajoutées (avec le compteur) ---
   emojis.forEach(emoji => {
     const count = reactions.filter(r => r.emoji === emoji).length;
-    if(count > 0) {
+    if (count > 0) {
       const span = document.createElement('span');
       span.textContent = `${emoji} ${count}`;
       span.className = "shown-reaction";
@@ -266,7 +246,7 @@ function renderReactions(reactions, messageId, userId) {
   return container;
 }
 
-// Afficher messages (intègre les réactions)
+// --- AFFICHER TOUS LES MESSAGES ---
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -274,7 +254,6 @@ async function getMessages() {
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -284,59 +263,21 @@ async function getMessages() {
 
   if (response.ok) {
     chatMessages.innerHTML = '';
-    let lastDate = null;
     for (const msg of data) {
-      const msgDate = new Date(msg.created_at).toLocaleDateString();
-      const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      const sender = users[msg.id_sent]?.username || 'Inconnu';
-      const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
-
-      if (msgDate !== lastDate) {
-        const dateEl = document.createElement('div');
-        dateEl.textContent = msgDate;
-        dateEl.classList.add('date');
-        chatMessages.appendChild(dateEl);
-        lastDate = msgDate;
-      }
-
-      const msgEl = document.createElement('div');
-      msgEl.textContent = `${sender}${city}: ${msg.content}`;
-      msgEl.classList.add('message');
-      msgEl.dataset.messageId = msg.id;
-
-      if (msg.id_sent === currentUserId) {
-        msgEl.classList.add('sent');
-        const delBtn = document.createElement('span');
-        delBtn.textContent = '✖';
-        delBtn.classList.add('delete-button');
-        delBtn.onclick = () => deleteMessage(msg.id);
-        msgEl.appendChild(delBtn);
-      } else {
-        msgEl.classList.add('received');
-      }
-
-      const reactionsDiv = document.createElement('div');
-      reactionsDiv.className = 'reactions';
-      const reactions = await getReactions(msg.id);
-      const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
-      reactionsDiv.appendChild(reactionsBtn);
-      msgEl.appendChild(reactionsDiv);
-
-      chatMessages.appendChild(msgEl);
+      await renderSingleMessage(msg);
     }
-    chatMessages.scrollTop = chatMessages.scrollHeight;
   } else {
     console.error('Erreur chargement messages:', data);
   }
 }
 
-// --- ACTUALISATION CACHÉE DES RÉACTIONS ---
+// --- ACTUALISATION RÉACTIONS ---
 function refreshAllReactionsInBackground() {
   const messageDivs = document.querySelectorAll('.message');
   messageDivs.forEach(msgDiv => {
     const messageId = msgDiv.dataset.messageId;
     const reactionsDiv = msgDiv.querySelector('.reactions');
-    if(reactionsDiv && messageId) {
+    if (reactionsDiv && messageId) {
       getReactions(messageId).then(reactions => {
         const newReactionsBtn = renderReactions(reactions, messageId, currentUserId);
         reactionsDiv.innerHTML = '';
@@ -346,7 +287,7 @@ function refreshAllReactionsInBackground() {
   });
 }
 
-// --- GESTION CONNEXION ---
+// --- CONNEXION / DÉCONNEXION ---
 async function login(username, password) {
   await getUsers();
   const found = Object.values(users).find(u => u.username === username && u.password === password);
@@ -373,6 +314,7 @@ function logout() {
   chatMessages.innerHTML = '';
 }
 
+// --- ÉVÉNEMENTS ---
 loginButton.onclick = () => login(loginUsername.value, loginPassword.value);
 logoutButton.onclick = logout;
 
@@ -386,7 +328,7 @@ sendButton.onclick = async () => {
 
 userSelect.onchange = () => getMessages();
 
-// --- Initialisation ---
+// --- INITIALISATION ---
 (async () => {
   await getUsers();
   messageInput.disabled = true;
