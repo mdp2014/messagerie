@@ -1,9 +1,5 @@
-// --- CONFIGURATION SUPABASE ---
-const supabaseUrl = 'https://sqnjzcqcmtjhbptjlixe.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbmp6Y3FjbXRqaGJwdGpsaXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTY1ODcsImV4cCI6MjA2NDA5MjU4N30.lJIsRndHSS95pxJrH726jDaHANTaj_Q14IoZ4JNm-Rg';
-const emojis = ['👍', '😂', '❤️', '🔥', '👏', '😮', '😢', '😡', '🎉', '🙏'];
-
-// --- RÉFÉRENCES HTML ---
+const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -19,9 +15,10 @@ const logoutButton = document.getElementById('logout-button');
 let users = {};
 let currentUserId = null;
 
-// --- CHARGER LES UTILISATEURS ---
+// Charger utilisateurs
 async function getUsers() {
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
+    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -42,17 +39,18 @@ async function getUsers() {
   }
 }
 
-// --- GÉOLOCALISATION ---
+// Géolocalisation
 function getGeolocation() {
   return new Promise((resolve, reject) => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        pos => resolve({ latitude: pos.coords.latitude, longitude: pos.coords.longitude }),
+        pos => resolve({
+          latitude: pos.coords.latitude,
+          longitude: pos.coords.longitude
+        }),
         reject
       );
-    } else {
-      reject(new Error('Non supporté'));
-    }
+    } else reject(new Error('Non supporté'));
   });
 }
 
@@ -62,88 +60,39 @@ async function getCityFromCoordinates(latitude, longitude) {
   return data.address.city || data.address.town || data.address.village || 'Inconnue';
 }
 
-// --- ENVOYER UN MESSAGE ---
+// Envoi message
 async function sendMessage(userId, content) {
-  console.log('Envoi du message:', content);
-  let latitude = null, longitude = null, city = 'Inconnue';
   try {
     const geo = await getGeolocation();
-    latitude = geo.latitude;
-    longitude = geo.longitude;
-    city = await getCityFromCoordinates(latitude, longitude);
+    const city = await getCityFromCoordinates(geo.latitude, geo.longitude);
+    const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      },
+      body: JSON.stringify({
+        id_sent: userId,
+        user_id: userId,
+        content,
+        created_at: new Date().toISOString(),
+        id_received: userSelect.value,
+        latitude: geo.latitude,
+        longitude: geo.longitude,
+        city
+      })
+    });
+
+    const data = await response.json();
+    if (!response.ok) console.error('Erreur message:', data);
+    else getMessages();
   } catch (e) {
-    console.warn("Géolocalisation impossible :", e.message);
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
-    },
-    body: JSON.stringify({
-      id_sent: userId,
-      id_received: userSelect.value,
-      content,
-      latitude,
-      longitude,
-      city
-    })
-  });
-
-  const data = await response.json();
-  if (!response.ok) {
-    console.error('Erreur message:', data);
-  } else {
-    console.log('Message envoyé avec succès:', data);
-    await renderSingleMessage(data);
+    console.error('Erreur géoloc:', e);
   }
 }
 
-// --- AFFICHER UN MESSAGE ---
-async function renderSingleMessage(msg) {
-  const msgDate = new Date(msg.created_at).toLocaleDateString();
-  const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const sender = users[msg.id_sent]?.username || 'Inconnu';
-  const cityInfo = msg.city ? ` (${msg.city} - ${msgTime})` : '';
-
-  const existingDates = [...chatMessages.querySelectorAll('.date')].map(el => el.textContent);
-  if (!existingDates.includes(msgDate)) {
-    const dateEl = document.createElement('div');
-    dateEl.textContent = msgDate;
-    dateEl.classList.add('date');
-    chatMessages.appendChild(dateEl);
-  }
-
-  const msgEl = document.createElement('div');
-  msgEl.textContent = `${sender}${cityInfo}: ${msg.content}`;
-  msgEl.classList.add('message');
-  msgEl.dataset.messageId = msg.id;
-
-  if (msg.id_sent === currentUserId) {
-    msgEl.classList.add('sent');
-    const delBtn = document.createElement('span');
-    delBtn.textContent = '✖';
-    delBtn.classList.add('delete-button');
-    delBtn.onclick = () => deleteMessage(msg.id);
-    msgEl.appendChild(delBtn);
-  } else {
-    msgEl.classList.add('received');
-  }
-
-  const reactionsDiv = document.createElement('div');
-  reactionsDiv.className = 'reactions';
-  const reactions = await getReactions(msg.id);
-  const reactionsBtn = renderReactions(reactions, msg.id, currentUserId);
-  reactionsDiv.appendChild(reactionsBtn);
-  msgEl.appendChild(reactionsDiv);
-
-  chatMessages.appendChild(msgEl);
-  chatMessages.scrollTop = chatMessages.scrollHeight;
-}
-
-// --- SUPPRIMER UN MESSAGE ---
+// Supprimer message
 async function deleteMessage(messageId) {
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?id=eq.${messageId}`, {
     method: 'DELETE',
@@ -156,99 +105,7 @@ async function deleteMessage(messageId) {
   else console.error('Erreur suppression:', await response.json());
 }
 
-// --- RÉACTIONS ---
-async function getReactions(messageId) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/reactions?select=emoji,user_id&id=eq.${messageId}`, {
-    headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
-    }
-  });
-  if (!response.ok) return [];
-  return await response.json();
-}
-
-async function refreshReactionsForMessage(messageId, userId) {
-  const msgDiv = [...document.getElementsByClassName('message')].find(div => div.dataset.messageId == messageId);
-  if (msgDiv) {
-    const reactionsDiv = msgDiv.querySelector('.reactions');
-    if (reactionsDiv) {
-      const reactions = await getReactions(messageId);
-      const reactionsBtn = renderReactions(reactions, messageId, userId);
-      reactionsDiv.innerHTML = '';
-      reactionsDiv.appendChild(reactionsBtn);
-    }
-  }
-}
-
-async function addReaction(messageId, userId, emoji) {
-  const res = await fetch(`${supabaseUrl}/rest/v1/reactions`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
-    },
-    body: JSON.stringify({ message_id: messageId, user_id: userId, emoji })
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    console.error('Erreur Supabase:', data);
-    alert('Erreur lors de l\'enregistrement de la réaction');
-  } else {
-    refreshReactionsForMessage(messageId, userId);
-  }
-}
-
-function renderReactions(reactions, messageId, userId) {
-  const container = document.createElement('div');
-  container.className = 'reaction-buttons';
-
-  const triggerBtn = document.createElement('button');
-  triggerBtn.textContent = "😀";
-  triggerBtn.className = "trigger-emoji-btn";
-  triggerBtn.onclick = (e) => {
-    e.stopPropagation();
-    const existingMenu = container.querySelector('.emoji-menu');
-    if (existingMenu) return existingMenu.remove();
-
-    const menu = document.createElement('div');
-    menu.className = 'emoji-menu';
-    emojis.forEach(emoji => {
-      const btn = document.createElement('button');
-      btn.textContent = emoji;
-      btn.className = 'emoji-choice-btn';
-      btn.onclick = (ev) => {
-        ev.stopPropagation();
-        if (userId) addReaction(messageId, userId, emoji);
-        else alert("Connecte-toi pour réagir !");
-        menu.remove();
-      };
-      menu.appendChild(btn);
-    });
-    container.appendChild(menu);
-
-    document.addEventListener('click', function closeMenuFn() {
-      menu.remove();
-      document.removeEventListener('click', closeMenuFn);
-    });
-  };
-  container.appendChild(triggerBtn);
-
-  emojis.forEach(emoji => {
-    const count = reactions.filter(r => r.emoji === emoji).length;
-    if (count > 0) {
-      const span = document.createElement('span');
-      span.textContent = `${emoji} ${count}`;
-      span.className = "shown-reaction";
-      container.appendChild(span);
-    }
-  });
-
-  return container;
-}
-
-// --- AFFICHER TOUS LES MESSAGES ---
+// Afficher messages
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -256,6 +113,7 @@ async function getMessages() {
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
+    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -265,74 +123,132 @@ async function getMessages() {
 
   if (response.ok) {
     chatMessages.innerHTML = '';
-    for (const msg of data) {
-      await renderSingleMessage(msg);
-    }
+    let lastDate = null;
+    data.forEach(msg => {
+      const msgDate = new Date(msg.created_at).toLocaleDateString();
+      const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+      const sender = users[msg.id_sent]?.username || 'Inconnu';
+      const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
+
+      if (msgDate !== lastDate) {
+        const dateEl = document.createElement('div');
+        dateEl.textContent = msgDate;
+        dateEl.classList.add('date');
+        chatMessages.appendChild(dateEl);
+        lastDate = msgDate;
+      }
+
+      const msgEl = document.createElement('div');
+      msgEl.textContent = `${sender}${city}: ${msg.content}`;
+      msgEl.classList.add('message');
+      if (msg.id_sent === currentUserId) {
+        msgEl.classList.add('sent');
+        const delBtn = document.createElement('span');
+        delBtn.textContent = '✖';
+        delBtn.classList.add('delete-button');
+        delBtn.onclick = () => deleteMessage(msg.id);
+        msgEl.appendChild(delBtn);
+      } else {
+        msgEl.classList.add('received');
+      }
+      chatMessages.appendChild(msgEl);
+    });
   } else {
     console.error('Erreur chargement messages:', data);
   }
 }
 
-// --- ACTUALISATION RÉACTIONS ---
-function refreshAllReactionsInBackground() {
-  const messageDivs = document.querySelectorAll('.message');
-  messageDivs.forEach(msgDiv => {
-    const messageId = msgDiv.dataset.messageId;
-    const reactionsDiv = msgDiv.querySelector('.reactions');
-    if (reactionsDiv && messageId) {
-      getReactions(messageId).then(reactions => {
-        const newReactionsBtn = renderReactions(reactions, messageId, currentUserId);
-        reactionsDiv.innerHTML = '';
-        reactionsDiv.appendChild(newReactionsBtn);
-      });
-    }
-  });
+// Rafraîchissement automatique
+function refreshMessages() {
+  setInterval(getMessages, 1500);
 }
 
-// --- CONNEXION / DÉCONNEXION ---
-async function login(username, password) {
-  await getUsers();
-  const found = Object.values(users).find(u => u.username === username && u.password === password);
-  if (found) {
-    currentUserId = found.id;
-    loginContainer.style.display = 'none';
-    connectedUser.style.display = 'block';
-    connectedUsername.textContent = username;
-    messageInput.disabled = false;
-    sendButton.disabled = false;
-    await getMessages();
-    setInterval(refreshAllReactionsInBackground, 10000);
-  } else {
-    alert('Identifiants invalides');
-  }
+// Connexion
+function login() {
+  const username = loginUsername.value;
+  const password = loginPassword.value;
+  const user = Object.values(users).find(u => u.username === username);
+
+  if (user) {
+    if (user.password === '' || user.password === password) {
+      currentUserId = user.id;
+      alert('Connecté !');
+      loginContainer.style.display = 'none';
+      connectedUser.style.display = 'block';
+      connectedUsername.textContent = user.username;
+      getMessages();
+      refreshMessages();
+    } else alert('Mot de passe incorrect');
+  } else alert('Utilisateur introuvable');
 }
 
+// Déconnexion
 function logout() {
   currentUserId = null;
   loginContainer.style.display = 'block';
   connectedUser.style.display = 'none';
-  messageInput.disabled = true;
-  sendButton.disabled = true;
   chatMessages.innerHTML = '';
 }
 
-// --- ÉVÉNEMENTS ---
-loginButton.onclick = () => login(loginUsername.value, loginPassword.value);
-logoutButton.onclick = logout;
-
-sendButton.onclick = async () => {
-  const content = messageInput.value.trim();
-  if (content.length > 0) {
-    await sendMessage(currentUserId, content);
-    messageInput.value = '';
+// Événements
+sendButton.addEventListener('click', () => {
+  if (currentUserId) {
+    const content = messageInput.value.trim();
+    if (content) {
+      sendMessage(currentUserId, content);
+      messageInput.value = '';
+    }
+  } else {
+    alert('Connectez-vous pour envoyer un message');
   }
+});
+
+loginButton.addEventListener('click', login);
+logoutButton.addEventListener('click', logout);
+
+window.onload = () => {
+  getUsers().then(() => {
+    getMessages();
+  });
 };
 
-userSelect.onchange = () => getMessages();
+userSelect.addEventListener('change', getMessages);
 
-// --- INITIALISATION ---
-(async () => {
-  await getUsers();
-  messageInput.disabled = true;
-  sendButton.disabled = true;
-})();
+// 🔐 Système d'inscription
+document.getElementById('signup-button').addEventListener('click', async () => {
+  const username = document.getElementById('signup-username').value.trim();
+  const password = document.getElementById('signup-password').value;
+  const confirmPassword = document.getElementById('signup-confirm-password').value;
+
+  if (!username || !password || !confirmPassword) {
+    alert("Tous les champs sont requis.");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    alert("Les mots de passe ne correspondent pas.");
+    return;
+  }
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Prefer': 'return=representation'
+    },
+    body: JSON.stringify({ username, password })
+  });
+
+  if (response.ok) {
+    alert("Compte créé !");
+    document.getElementById('signup-username').value = '';
+    document.getElementById('signup-password').value = '';
+    document.getElementById('signup-confirm-password').value = '';
+    await getUsers();
+  } else {
+    const errorData = await response.json();
+    alert("Erreur : " + (errorData.message || "Impossible de créer le compte."));
+  }
+});
