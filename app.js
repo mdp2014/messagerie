@@ -1,7 +1,5 @@
 const supabaseUrl = 'https://sqnjzcqcmtjhbptjlixe.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbmp6Y3FjbXRqaGJwdGpsaXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTY1ODcsImV4cCI6MjA2NDA5MjU4N30.lJIsRndHSS95pxJrH726jDaHANTaj_Q14IoZ4JNm-Rg';
-const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
-
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -20,6 +18,7 @@ let currentUserId = null;
 // Charger utilisateurs
 async function getUsers() {
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
+    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -40,6 +39,7 @@ async function getUsers() {
   }
 }
 
+// Géolocalisation
 function getGeolocation() {
   return new Promise((resolve, reject) => {
     if (navigator.geolocation) {
@@ -60,6 +60,7 @@ async function getCityFromCoordinates(latitude, longitude) {
   return data.address.city || data.address.town || data.address.village || 'Inconnue';
 }
 
+// Envoi message
 async function sendMessage(userId, content) {
   try {
     const geo = await getGeolocation();
@@ -83,13 +84,15 @@ async function sendMessage(userId, content) {
       })
     });
 
-    if (response.ok) getMessages();
-    else console.error('Erreur message:', await response.json());
+    const data = await response.json();
+    if (!response.ok) console.error('Erreur message:', data);
+    else getMessages();
   } catch (e) {
     console.error('Erreur géoloc:', e);
   }
 }
 
+// Supprimer message
 async function deleteMessage(messageId) {
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?id=eq.${messageId}`, {
     method: 'DELETE',
@@ -102,6 +105,7 @@ async function deleteMessage(messageId) {
   else console.error('Erreur suppression:', await response.json());
 }
 
+// Afficher messages
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -109,12 +113,12 @@ async function getMessages() {
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
+    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
     }
   });
-
   const data = await response.json();
 
   if (response.ok) {
@@ -154,10 +158,12 @@ async function getMessages() {
   }
 }
 
+// Rafraîchissement automatique
 function refreshMessages() {
   setInterval(getMessages, 1500);
 }
 
+// Connexion
 function login() {
   const username = loginUsername.value;
   const password = loginPassword.value;
@@ -176,6 +182,7 @@ function login() {
   } else alert('Utilisateur introuvable');
 }
 
+// Déconnexion
 function logout() {
   currentUserId = null;
   loginContainer.style.display = 'block';
@@ -183,6 +190,7 @@ function logout() {
   chatMessages.innerHTML = '';
 }
 
+// Événements
 sendButton.addEventListener('click', () => {
   if (currentUserId) {
     const content = messageInput.value.trim();
@@ -198,14 +206,16 @@ sendButton.addEventListener('click', () => {
 loginButton.addEventListener('click', login);
 logoutButton.addEventListener('click', logout);
 
-userSelect.addEventListener('change', getMessages);
-
-window.onload = async () => {
-  await getUsers();
-  getMessages();
+window.onload = () => {
+  getUsers().then(() => {
+    getMessages();
+  });
 };
 
-document.getElementById('signup-button')?.addEventListener('click', async () => {
+userSelect.addEventListener('change', getMessages);
+
+// 🔐 Système d'inscription
+document.getElementById('signup-button').addEventListener('click', async () => {
   const username = document.getElementById('signup-username').value.trim();
   const password = document.getElementById('signup-password').value;
   const confirmPassword = document.getElementById('signup-confirm-password').value;
@@ -240,55 +250,5 @@ document.getElementById('signup-button')?.addEventListener('click', async () => 
   } else {
     const errorData = await response.json();
     alert("Erreur : " + (errorData.message || "Impossible de créer le compte."));
-  }
-});
-
-// Connexion Google
-document.getElementById('google-login-button').addEventListener('click', async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google'
-  });
-  if (error) alert('Erreur connexion Google : ' + error.message);
-});
-
-// Vérifie si un utilisateur est déjà connecté via Google
-window.addEventListener('load', async () => {
-  const { data: sessionData, error } = await supabase.auth.getUser();
-  if (sessionData?.user) {
-    const email = sessionData.user.email;
-    if (!email) return;
-
-    await getUsers();
-    let user = Object.values(users).find(u => u.username === email);
-
-    // S'il n'existe pas, on l'ajoute
-    if (!user) {
-      const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({ username: email, password: '' })
-      });
-
-      const newUser = await response.json();
-      if (response.ok) {
-        user = newUser[0];
-        await getUsers(); // pour mettre à jour users[]
-      } else {
-        console.error("Erreur ajout utilisateur Google :", newUser);
-        return;
-      }
-    }
-
-    currentUserId = user.id;
-    loginContainer.style.display = 'none';
-    connectedUser.style.display = 'block';
-    connectedUsername.textContent = user.username;
-    getMessages();
-    refreshMessages();
   }
 });
