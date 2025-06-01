@@ -13,7 +13,6 @@ const loginContainer = document.getElementById('login-container');
 const connectedUser = document.getElementById('connected-user');
 const connectedUsername = document.getElementById('connected-username');
 const logoutButton = document.getElementById('logout-button');
-const googleLoginButton = document.getElementById('google-login-button');
 
 let users = {};
 let currentUserId = null;
@@ -84,8 +83,8 @@ async function sendMessage(userId, content) {
       })
     });
 
-    if (!response.ok) console.error('Erreur message:', await response.json());
-    else getMessages();
+    if (response.ok) getMessages();
+    else console.error('Erreur message:', await response.json());
   } catch (e) {
     console.error('Erreur géoloc:', e);
   }
@@ -115,6 +114,7 @@ async function getMessages() {
       'Authorization': `Bearer ${supabaseKey}`
     }
   });
+
   const data = await response.json();
 
   if (response.ok) {
@@ -200,14 +200,25 @@ logoutButton.addEventListener('click', logout);
 
 userSelect.addEventListener('change', getMessages);
 
-// Inscription simple
-document.getElementById('signup-button').addEventListener('click', async () => {
+window.onload = async () => {
+  await getUsers();
+  getMessages();
+};
+
+document.getElementById('signup-button')?.addEventListener('click', async () => {
   const username = document.getElementById('signup-username').value.trim();
   const password = document.getElementById('signup-password').value;
   const confirmPassword = document.getElementById('signup-confirm-password').value;
 
-  if (!username || !password || !confirmPassword) return alert("Tous les champs sont requis.");
-  if (password !== confirmPassword) return alert("Les mots de passe ne correspondent pas.");
+  if (!username || !password || !confirmPassword) {
+    alert("Tous les champs sont requis.");
+    return;
+  }
+
+  if (password !== confirmPassword) {
+    alert("Les mots de passe ne correspondent pas.");
+    return;
+  }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
     method: 'POST',
@@ -222,6 +233,9 @@ document.getElementById('signup-button').addEventListener('click', async () => {
 
   if (response.ok) {
     alert("Compte créé !");
+    document.getElementById('signup-username').value = '';
+    document.getElementById('signup-password').value = '';
+    document.getElementById('signup-confirm-password').value = '';
     await getUsers();
   } else {
     const errorData = await response.json();
@@ -229,23 +243,27 @@ document.getElementById('signup-button').addEventListener('click', async () => {
   }
 });
 
-// Connexion avec Google
-googleLoginButton.addEventListener('click', async () => {
-  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+// Connexion Google
+document.getElementById('google-login-button').addEventListener('click', async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google'
+  });
   if (error) alert('Erreur connexion Google : ' + error.message);
 });
 
-// Si connecté avec Google, crée ou récupère l’utilisateur dans la table `users`
+// Vérifie si un utilisateur est déjà connecté via Google
 window.addEventListener('load', async () => {
-  await getUsers();
+  const { data: sessionData, error } = await supabase.auth.getUser();
+  if (sessionData?.user) {
+    const email = sessionData.user.email;
+    if (!email) return;
 
-  const { data, error } = await supabase.auth.getUser();
-  const user = data?.user;
-  if (user) {
-    const email = user.email;
-    let existing = Object.values(users).find(u => u.username === email);
-    if (!existing) {
-      const res = await fetch(`${supabaseUrl}/rest/v1/users`, {
+    await getUsers();
+    let user = Object.values(users).find(u => u.username === email);
+
+    // S'il n'existe pas, on l'ajoute
+    if (!user) {
+      const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -255,15 +273,21 @@ window.addEventListener('load', async () => {
         },
         body: JSON.stringify({ username: email, password: '' })
       });
-      const newUser = await res.json();
-      existing = newUser[0];
-      await getUsers();
+
+      const newUser = await response.json();
+      if (response.ok) {
+        user = newUser[0];
+        await getUsers(); // pour mettre à jour users[]
+      } else {
+        console.error("Erreur ajout utilisateur Google :", newUser);
+        return;
+      }
     }
 
-    currentUserId = existing.id;
+    currentUserId = user.id;
     loginContainer.style.display = 'none';
     connectedUser.style.display = 'block';
-    connectedUsername.textContent = email;
+    connectedUsername.textContent = user.username;
     getMessages();
     refreshMessages();
   }
