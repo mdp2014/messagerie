@@ -1,6 +1,7 @@
 const supabaseUrl = 'https://sqnjzcqcmtjhbptjlixe.supabase.co';
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbmp6Y3FjbXRqaGJwdGpsaXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTY1ODcsImV4cCI6MjA2NDA5MjU4N30.lJIsRndHSS95pxJrH726jDaHANTaj_Q14IoZ4JNm-Rg';
 const supabase = supabasejs.createClient(supabaseUrl, supabaseKey);
+
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -12,6 +13,7 @@ const loginContainer = document.getElementById('login-container');
 const connectedUser = document.getElementById('connected-user');
 const connectedUsername = document.getElementById('connected-username');
 const logoutButton = document.getElementById('logout-button');
+const googleLoginButton = document.getElementById('google-login-button');
 
 let users = {};
 let currentUserId = null;
@@ -19,7 +21,6 @@ let currentUserId = null;
 // Charger utilisateurs
 async function getUsers() {
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -40,7 +41,6 @@ async function getUsers() {
   }
 }
 
-// Géolocalisation
 function getGeolocation() {
   return new Promise((resolve, reject) => {
     if (navigator.geolocation) {
@@ -61,7 +61,6 @@ async function getCityFromCoordinates(latitude, longitude) {
   return data.address.city || data.address.town || data.address.village || 'Inconnue';
 }
 
-// Envoi message
 async function sendMessage(userId, content) {
   try {
     const geo = await getGeolocation();
@@ -85,15 +84,13 @@ async function sendMessage(userId, content) {
       })
     });
 
-    const data = await response.json();
-    if (!response.ok) console.error('Erreur message:', data);
+    if (!response.ok) console.error('Erreur message:', await response.json());
     else getMessages();
   } catch (e) {
     console.error('Erreur géoloc:', e);
   }
 }
 
-// Supprimer message
 async function deleteMessage(messageId) {
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?id=eq.${messageId}`, {
     method: 'DELETE',
@@ -106,7 +103,6 @@ async function deleteMessage(messageId) {
   else console.error('Erreur suppression:', await response.json());
 }
 
-// Afficher messages
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -114,7 +110,6 @@ async function getMessages() {
   }
 
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -159,12 +154,10 @@ async function getMessages() {
   }
 }
 
-// Rafraîchissement automatique
 function refreshMessages() {
   setInterval(getMessages, 1500);
 }
 
-// Connexion
 function login() {
   const username = loginUsername.value;
   const password = loginPassword.value;
@@ -183,7 +176,6 @@ function login() {
   } else alert('Utilisateur introuvable');
 }
 
-// Déconnexion
 function logout() {
   currentUserId = null;
   loginContainer.style.display = 'block';
@@ -191,7 +183,6 @@ function logout() {
   chatMessages.innerHTML = '';
 }
 
-// Événements
 sendButton.addEventListener('click', () => {
   if (currentUserId) {
     const content = messageInput.value.trim();
@@ -207,29 +198,16 @@ sendButton.addEventListener('click', () => {
 loginButton.addEventListener('click', login);
 logoutButton.addEventListener('click', logout);
 
-window.onload = () => {
-  getUsers().then(() => {
-    getMessages();
-  });
-};
-
 userSelect.addEventListener('change', getMessages);
 
-// 🔐 Système d'inscription
+// Inscription simple
 document.getElementById('signup-button').addEventListener('click', async () => {
   const username = document.getElementById('signup-username').value.trim();
   const password = document.getElementById('signup-password').value;
   const confirmPassword = document.getElementById('signup-confirm-password').value;
 
-  if (!username || !password || !confirmPassword) {
-    alert("Tous les champs sont requis.");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    alert("Les mots de passe ne correspondent pas.");
-    return;
-  }
+  if (!username || !password || !confirmPassword) return alert("Tous les champs sont requis.");
+  if (password !== confirmPassword) return alert("Les mots de passe ne correspondent pas.");
 
   const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
     method: 'POST',
@@ -244,34 +222,49 @@ document.getElementById('signup-button').addEventListener('click', async () => {
 
   if (response.ok) {
     alert("Compte créé !");
-    document.getElementById('signup-username').value = '';
-    document.getElementById('signup-password').value = '';
-    document.getElementById('signup-confirm-password').value = '';
     await getUsers();
   } else {
     const errorData = await response.json();
     alert("Erreur : " + (errorData.message || "Impossible de créer le compte."));
   }
 });
-const googleLoginButton = document.getElementById('google-login-button');
 
+// Connexion avec Google
 googleLoginButton.addEventListener('click', async () => {
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'google'
-  });
-  if (error) {
-    alert('Erreur connexion Google : ' + error.message);
-  }
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
+  if (error) alert('Erreur connexion Google : ' + error.message);
 });
 
-// Vérifie si un utilisateur est déjà connecté via Google
+// Si connecté avec Google, crée ou récupère l’utilisateur dans la table `users`
 window.addEventListener('load', async () => {
+  await getUsers();
+
   const { data, error } = await supabase.auth.getUser();
-  if (data.user) {
-    alert('Connecté via Google : ' + (data.user.email || 'Utilisateur'));
+  const user = data?.user;
+  if (user) {
+    const email = user.email;
+    let existing = Object.values(users).find(u => u.username === email);
+    if (!existing) {
+      const res = await fetch(`${supabaseUrl}/rest/v1/users`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': supabaseKey,
+          'Authorization': `Bearer ${supabaseKey}`,
+          'Prefer': 'return=representation'
+        },
+        body: JSON.stringify({ username: email, password: '' })
+      });
+      const newUser = await res.json();
+      existing = newUser[0];
+      await getUsers();
+    }
+
+    currentUserId = existing.id;
     loginContainer.style.display = 'none';
     connectedUser.style.display = 'block';
-    connectedUsername.textContent = data.user.email;
+    connectedUsername.textContent = email;
+    getMessages();
     refreshMessages();
   }
 });
