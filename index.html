@@ -1,42 +1,114 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Messagerie Instantanée</title>
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8">
+  <title>Chat Supabase</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: #f5f5f5;
+      margin: 0;
+      padding: 1rem;
+    }
+    .container {
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      padding: 1rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    #chat-messages {
+      border: 1px solid #ccc;
+      height: 300px;
+      overflow-y: scroll;
+      padding: 10px;
+      margin-bottom: 1rem;
+      background: #fafafa;
+    }
+    .message {
+      margin: 5px 0;
+    }
+    .sent {
+      text-align: right;
+      color: green;
+    }
+    .received {
+      text-align: left;
+      color: blue;
+    }
+    .delete-button {
+      margin-left: 8px;
+      color: red;
+      cursor: pointer;
+    }
+    .date {
+      text-align: center;
+      font-weight: bold;
+      margin: 8px 0;
+      color: #666;
+    }
+    #connected-user {
+      display: none;
+      margin-bottom: 1rem;
+    }
+    #login-container {
+      margin-bottom: 1rem;
+    }
+    input, select, button {
+      margin: 5px 0;
+      padding: 0.5rem;
+      font-size: 1rem;
+      width: 100%;
+    }
+    button {
+      cursor: pointer;
+    }
+    hr {
+      margin: 1rem 0;
+    }
+  </style>
 </head>
 <body>
-    <div class="login-container" id="login-container">
-        <h2>Connexion</h2>
-        <input type="text" id="login-username" placeholder="Nom d'utilisateur">
-        <input type="password" id="login-password" placeholder="Mot de passe">
-        <button id="login-button">Se connecter</button>
-        <button id="google-login-button">Connexion avec Google</button>
-        <p>Pas encore inscrit? <a href="https://mdp2014.github.io/messagerie/inscription.html">S'inscrire</a></p>
+  <div class="container">
+    <h1>💬 Chat Supabase</h1>
+
+    <div id="connected-user">
+      Connecté en tant que : <strong id="connected-username"></strong><br>
+      <button id="logout-button">Déconnexion</button>
     </div>
-    <div class="connected-user" id="connected-user" style="display: none;">
-        <p>Utilisateur connecté : <span id="connected-username"></span> <button id="logout-button">Déconnexion</button></p>
+
+    <div id="login-container">
+      <h2>Connexion</h2>
+      <input type="text" id="login-username" placeholder="Nom d'utilisateur">
+      <input type="password" id="login-password" placeholder="Mot de passe">
+      <button id="login-button">Connexion</button>
+      <button id="google-login-button">Se connecter avec Google</button>
+
+      <hr>
+
+      <h2>Créer un compte</h2>
+      <input type="text" id="signup-username" placeholder="Nom d'utilisateur">
+      <input type="password" id="signup-password" placeholder="Mot de passe">
+      <input type="password" id="signup-confirm-password" placeholder="Confirmez le mot de passe">
+      <button id="signup-button">Créer un compte</button>
     </div>
-    <div class="chat-container">
-        <div class="chat-header">
-            <h1>Messagerie Instantanée</h1>
-        </div>
-        <div class="user-selection">
-            <label for="user-select">Sélectionnez un utilisateur :</label>
-            <select id="user-select">
-                <!-- Les options seront ajoutées ici par JavaScript -->
-            </select>
-        </div>
-        <div class="chat-messages" id="chat-messages">
-            <!-- Les messages seront affichés ici -->
-        </div>
-        <div class="chat-input">
-            <input type="text" id="message-input" placeholder="Tapez votre message...">
-            <button id="send-button">Envoyer</button>
-        </div>
-    </div>
-        <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-    <script src="app.js"></script>
+
+    <hr>
+
+    <h2>Messages</h2>
+    <label for="user-select">Choisir un utilisateur :</label>
+    <select id="user-select"></select>
+
+    <div id="chat-messages"></div>
+
+    <input type="text" id="message-input" placeholder="Tapez un message...">
+    <button id="send-button">Envoyer</button>
+  </div>
+
+  <!-- Supabase JS -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.43.0/dist/umd/supabase.min.js"></script>
+  <!-- Ton app.js -->
+  <script src="app.js"></script>
 </body>
 </html>
