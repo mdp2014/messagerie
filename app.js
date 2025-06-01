@@ -28,12 +28,13 @@ async function getUsers() {
   if (response.ok) {
     userSelect.innerHTML = '';
     data.forEach(user => {
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = user.username;
-      userSelect.appendChild(option);
-      users[user.id] = user;
-    });
+  const option = document.createElement('option');
+  option.value = user.id;
+  option.textContent = `👤 ${user.username}`;
+  userSelect.appendChild(option);
+  users[user.id] = user;
+});
+
   } else {
     console.error('Erreur chargement utilisateurs:', data);
   }
