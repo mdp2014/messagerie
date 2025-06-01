@@ -253,3 +253,25 @@ document.getElementById('signup-button').addEventListener('click', async () => {
     alert("Erreur : " + (errorData.message || "Impossible de créer le compte."));
   }
 });
+const googleLoginButton = document.getElementById('google-login-button');
+
+googleLoginButton.addEventListener('click', async () => {
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google'
+  });
+  if (error) {
+    alert('Erreur connexion Google : ' + error.message);
+  }
+});
+
+// Vérifie si un utilisateur est déjà connecté via Google
+window.addEventListener('load', async () => {
+  const { data, error } = await supabase.auth.getUser();
+  if (data.user) {
+    alert('Connecté via Google : ' + (data.user.email || 'Utilisateur'));
+    loginContainer.style.display = 'none';
+    connectedUser.style.display = 'block';
+    connectedUsername.textContent = data.user.email;
+    refreshMessages();
+  }
+});
