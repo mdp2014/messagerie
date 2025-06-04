@@ -41,7 +41,7 @@ async function getUnreadCounts() {
 
 
 async function getUsers() {
-  const selectedId = userSelect.value;
+  const selectedId = userSelect.value; // 🧠 On garde la sélection actuelle
 
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
     method: 'GET',
@@ -55,42 +55,19 @@ async function getUsers() {
 
   if (response.ok) {
     userSelect.innerHTML = '';
-    users = {}; // Réinitialiser le cache
+    users = {};
 
     for (const user of data) {
       users[user.id] = user;
 
       let unreadCount = 0;
-
       if (user.id !== currentUserId) {
-        // Récupérer le nombre de messages non lus venant de ce user
         const msgResponse = await fetch(`${supabaseUrl}/rest/v1/messages?select=id&read=eq.false&id_sent=eq.${user.id}&id_received=eq.${currentUserId}`, {
           headers: {
             'apikey': supabaseKey,
             'Authorization': `Bearer ${supabaseKey}`
           }
-        });
 
-        if (msgResponse.ok) {
-          const unreadMessages = await msgResponse.json();
-          unreadCount = unreadMessages.length;
-        }
-      }
-
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = user.username + (unreadCount > 0 ? ` 🔴 (${unreadCount})` : '');
-      userSelect.appendChild(option);
-    }
-
-    if (selectedId && users[selectedId]) {
-      userSelect.value = selectedId;
-    }
-
-  } else {
-    console.error('Erreur chargement utilisateurs:', data);
-  }
-}
 
 
 
