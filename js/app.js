@@ -1,5 +1,4 @@
-const supabaseUrl = 'https://sqnjzcqcmtjhbptjlixe.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbmp6Y3FjbXRqaGJwdGpsaXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTY1ODcsImV4cCI6MjA2NDA5MjU4N30.lJIsRndHSS95pxJrH726jDaHANTaj_Q14IoZ4JNm-Rg';
+import { SUPABASE_URL, SUPABASE_KEY } from './config.js';
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -17,10 +16,10 @@ let currentUserId = null;
 
 // Charger utilisateurs une seule fois
 async function getUsers() {
-  const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username,password`, {
     headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   });
   const data = await response.json();
@@ -64,12 +63,12 @@ async function sendMessage(userId, content) {
   try {
     const geo = await getGeolocation();
     const city = await getCityFromCoordinates(geo.latitude, geo.longitude);
-    const response = await fetch(`${supabaseUrl}/rest/v1/messages`, {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
       },
       body: JSON.stringify({
         id_sent: userId,
@@ -96,11 +95,11 @@ async function sendMessage(userId, content) {
 
 // Supprimer message
 async function deleteMessage(messageId) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/messages?id=eq.${messageId}`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?id=eq.${messageId}`, {
     method: 'DELETE',
     headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   });
   if (response.ok) getMessages();
@@ -109,11 +108,11 @@ async function deleteMessage(messageId) {
 
 // Marquer messages comme lus
 async function markMessagesAsRead(fromUserId) {
-  const response = await fetch(`${supabaseUrl}/rest/v1/messages?read=eq.false&id_sent=eq.${fromUserId}&id_received=eq.${currentUserId}`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?read=eq.false&id_sent=eq.${fromUserId}&id_received=eq.${currentUserId}`, {
     method: 'PATCH',
     headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({ read: true })
@@ -132,10 +131,10 @@ async function getMessages() {
 
   await markMessagesAsRead(userSelect.value);
 
-  const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
+  const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
     headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
+      'apikey': SUPABASE_KEY,
+      'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   });
 
@@ -188,10 +187,10 @@ async function updateUnreadCounts() {
   for (const [id, user] of Object.entries(users)) {
     if (id === currentUserId) continue;
 
-    const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=id&read=eq.false&id_sent=eq.${id}&id_received=eq.${currentUserId}`, {
+    const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?select=id&read=eq.false&id_sent=eq.${id}&id_received=eq.${currentUserId}`, {
       headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`
+        'apikey': SUPABASE_KEY,
+        'Authorization': `Bearer ${SUPABASE_KEY}`
       }
     });
 
