@@ -2,123 +2,127 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>Inscription</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Inscription avec Supabase</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      background: #f2f2f2;
+      background-color: #f4f4f4;
       display: flex;
       justify-content: center;
       align-items: center;
       height: 100vh;
     }
-
     .container {
-      background-color: white;
-      padding: 20px 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      width: 300px;
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
     }
-
-    h2 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    input {
-      width: 100%;
-      padding: 10px;
-      margin-top: 5px;
+    .form-group {
       margin-bottom: 15px;
-      border-radius: 5px;
-      border: 1px solid #ccc;
     }
-
-    button {
+    .form-group label {
+      display: block;
+      margin-bottom: 5px;
+    }
+    .form-group input {
       width: 100%;
-      padding: 10px;
-      background-color: #4CAF50;
-      color: white;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+    .form-group button {
+      background-color: #5cb85c;
+      color: #fff;
       border: none;
-      border-radius: 5px;
+      padding: 10px;
       cursor: pointer;
     }
-
-    button:hover {
-      background-color: #45a049;
-    }
-
-    .message {
-      text-align: center;
-      margin-top: 10px;
-      color: red;
-    }
-
-    .success {
-      color: green;
+    .form-group button:hover {
+      background-color: #4cae4c;
     }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h2>Créer un compte</h2>
-    <input type="text" id="username" placeholder="Nom d'utilisateur" required>
-    <input type="password" id="password" placeholder="Mot de passe" required>
-    <input type="password" id="confirm-password" placeholder="Confirmez le mot de passe" required>
-    <button onclick="register()">S'inscrire</button>
-    <div id="message" class="message"></div>
+    <h2>Inscription</h2>
+    <form id="signupForm">
+      <div class="form-group">
+        <label for="username">Nom d'utilisateur :</label>
+        <input type="text" id="username" name="username" placeholder="Votre nom" required>
+      </div>
+      <div class="form-group">
+        <label for="password">Mot de passe :</label>
+        <input type="password" id="password" name="password" required>
+      </div>
+      <div class="form-group">
+        <button type="submit">S'inscrire</button>
+      </div>
+    </form>
   </div>
 
+  <!-- Librairies JS -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+
+  <!-- Ton script -->
   <script>
-    const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
-    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+    // Quand la page est entièrement chargée
+    document.addEventListener('DOMContentLoaded', function() {
+      
+      // Configuration Supabase
+      const supabaseUrl = 'https://mlzkkljtvhlshtoujubm.supabase.co';
+      const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1semtrbGp0dmhsc2h0b3VqdWJtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDMzNDMyOTMsImV4cCI6MjA1ODkxOTI5M30._fYLWHH0EHtTyvqslouIcrOFz8l-ZBaqraKAON7Ce8k';
+      const supabase = supabase.createClient(supabaseUrl, supabaseKey);
 
-    async function register() {
-      const username = document.getElementById('username').value.trim();
-      const password = document.getElementById('password').value;
-      const confirmPassword = document.getElementById('confirm-password').value;
-      const message = document.getElementById('message');
+      const form = document.getElementById('signupForm');
 
-      message.textContent = '';
-      message.classList.remove('success');
+      form.addEventListener('submit', async function(event) {
+        event.preventDefault(); // Bloquer l'actualisation du formulaire
 
-      if (!username || !password || !confirmPassword) {
-        message.textContent = 'Tous les champs sont requis.';
-        return;
-      }
+        const username = document.getElementById('username').value.trim();
+        const password = document.getElementById('password').value.trim();
 
-      if (password !== confirmPassword) {
-        message.textContent = 'Les mots de passe ne correspondent pas.';
-        return;
-      }
+        if (username === '' || password === '') {
+          alert('Veuillez remplir tous les champs.');
+          return;
+        }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        })
+        try {
+          const { data, error } = await supabase.auth.signUp({
+            email: username + '@local',  // email fictif
+            password: password,
+            options: {
+              data: { username: username } // ajout du username
+            }
+          });
+
+          if (error) {
+            alert('Erreur lors de l\'inscription : ' + error.message);
+            console.error(error);
+          } else {
+            alert('Inscription réussie ! 🎉');
+            form.reset();
+
+            // Effet confettis
+            confetti({
+              particleCount: 100,
+              spread: 70,
+              origin: { y: 0.6 }
+            });
+
+            // (optionnel) Redirection après quelques secondes
+            // setTimeout(() => {
+            //   window.location.href = 'accueil.html';
+            // }, 2000);
+          }
+        } catch (err) {
+          console.error('Erreur inattendue :', err);
+          alert('Une erreur est survenue. Veuillez réessayer.');
+        }
       });
-
-      if (response.ok) {
-        message.textContent = 'Compte créé avec succès attendez😀🌈 15 seconde vous allez être diriger vers le site...';
-        message.classList.add('success');
-        setTimeout(function() {
-  window.location.href = "https://mdp2014.github.io/messagerie/";
-}, 15000);
-      } else {
-        const errorData = await response.json();
-        message.textContent = 'Erreur : ' + (errorData.message || 'Impossible de créer le compte.');
-      }
-    }
+    });
   </script>
 
 </body>
