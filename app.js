@@ -15,8 +15,59 @@ const logoutButton = document.getElementById('logout-button');
 let users = {};
 let currentUserId = null;
 
-// Charger utilisateurs
+
+async function getUnreadCounts() {
+  if (!currentUserId) return {};
+
+  const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=id,id_sent&read=eq.false&id_received=eq.${currentUserId}`, {
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    }
+  });
+
+  const data = await response.json();
+  const counts = {};
+
+  if (response.ok) {
+    data.forEach(msg => {
+      counts[msg.id_sent] = (counts[msg.id_sent] || 0) + 1;
+    });
+  }
+
+  return counts;
+}
+
 async function getUsers() {
+  const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
+    method: 'GET',
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    }
+  });
+
+  const data = await response.json();
+  if (!response.ok) {
+    console.error('Erreur chargement utilisateurs:', data);
+    return;
+  }
+
+  const unreadCounts = await getUnreadCounts(); // ← Nouveau
+
+  userSelect.innerHTML = '';
+  data.forEach(user => {
+    const option = document.createElement('option');
+    const unread = unreadCounts[user.id] || 0;
+    option.value = user.id;
+    option.textContent = user.username + (unread > 0 ? ` 🔴 (${unread})` : '');
+    userSelect.appendChild(option);
+    users[user.id] = user;
+  });
+}
+
+// Charger utilisateurs
+async function getUsers_() {
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
     method: 'GET',
     headers: {
@@ -59,6 +110,19 @@ async function getCityFromCoordinates(latitude, longitude) {
   const data = await response.json();
   return data.address.city || data.address.town || data.address.village || 'Inconnue';
 }
+
+async function markMessagesAsRead(senderId) {
+  await fetch(`${supabaseUrl}/rest/v1/messages?read=eq.false&id_sent=eq.${senderId}&id_received=eq.${currentUserId}`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`
+    },
+    body: JSON.stringify({ read: true })
+  });
+}
+
 
 // Envoi message
 async function sendMessage(userId, content) {
@@ -119,11 +183,13 @@ async function getMessages() {
       'Authorization': `Bearer ${supabaseKey}`
     }
   });
+
   const data = await response.json();
 
   if (response.ok) {
     chatMessages.innerHTML = '';
     let lastDate = null;
+
     data.forEach(msg => {
       const msgDate = new Date(msg.created_at).toLocaleDateString();
       const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -141,6 +207,7 @@ async function getMessages() {
       const msgEl = document.createElement('div');
       msgEl.textContent = `${sender}${city}: ${msg.content}`;
       msgEl.classList.add('message');
+
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
         const delBtn = document.createElement('span');
@@ -151,12 +218,21 @@ async function getMessages() {
       } else {
         msgEl.classList.add('received');
       }
+
       chatMessages.appendChild(msgEl);
     });
+
+    // ✅ ➕ ICI on marque les messages comme lus
+    await markMessagesAsRead(userSelect.value);
+
+    // ✅ ➕ Et on met à jour les pastilles 🔴 dans la liste
+    await getUsers();
+
   } else {
     console.error('Erreur chargement messages:', data);
   }
 }
+
 
 // Rafraîchissement automatique
 function refreshMessages() {
