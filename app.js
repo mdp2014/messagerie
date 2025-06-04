@@ -1,5 +1,5 @@
 const supabaseUrl = 'https://sqnjzcqcmtjhbptjlixe.supabase.co';
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNxbmp6Y3FjbXRqaGJwdGpsaXhlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg1MTY1ODcsImV4cCI6MjA2NDA5MjU4N30.lJIsRndHSS95pxJrH726jDaHANTaj_Q14IoZ4JNm-Rg';
+const supabaseKey = 'eyJhbGciOiJIUzI1NiIs...'; // Clé raccourcie ici pour lisibilité
 const chatMessages = document.getElementById('chat-messages');
 const messageInput = document.getElementById('message-input');
 const sendButton = document.getElementById('send-button');
@@ -15,105 +15,26 @@ const logoutButton = document.getElementById('logout-button');
 let users = {};
 let currentUserId = null;
 
-
-async function getUnreadCounts() {
-  if (!currentUserId) return {};
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=id,id_sent&read=eq.false&id_received=eq.${currentUserId}`, {
-    headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
-    }
-  });
-
-  const data = await response.json();
-  const counts = {};
-
-  if (response.ok) {
-    data.forEach(msg => {
-      counts[msg.id_sent] = (counts[msg.id_sent] || 0) + 1;
-    });
-  }
-
-  return counts;
-}
-
-
-
+// Charger utilisateurs une seule fois
 async function getUsers() {
-  const selectedId = userSelect.value; // 🧠 On garde la sélection actuelle
-
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
     }
   });
-
   const data = await response.json();
-
   if (response.ok) {
-    userSelect.innerHTML = '';
     users = {};
-
-    for (const user of data) {
-      users[user.id] = user;
-
-      let unreadCount = 0;
-      if (user.id !== currentUserId) {
-        const msgResponse = await fetch(`${supabaseUrl}/rest/v1/messages?select=id&read=eq.false&id_sent=eq.${user.id}&id_received=eq.${currentUserId}`, {
-          headers: {
-            'apikey': supabaseKey,
-            'Authorization': `Bearer ${supabaseKey}`
-          }
-        });
-        if (msgResponse.ok) {
-          const unreadMessages = await msgResponse.json();
-          unreadCount = unreadMessages.length;
-        }
-      }
-
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = user.username + (unreadCount > 0 ? ` 🔴 (${unreadCount})` : '');
-
-      // ✅ Remet la sélection si c'était lui avant le reset
-      if (user.id === selectedId) {
-        option.selected = true;
-      }
-
-      userSelect.appendChild(option);
-    }
-
-  } else {
-    console.error('Erreur chargement utilisateurs:', data);
-  }
-}
-
-
-
-// Charger utilisateurs
-async function getUsers_() {
-  const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
-    method: 'GET',
-    headers: {
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
-    }
-  });
-  const data = await response.json();
-  if (response.ok) {
     userSelect.innerHTML = '';
     data.forEach(user => {
+      users[user.id] = user;
       const option = document.createElement('option');
       option.value = user.id;
+      option.dataset.baseName = user.username;
       option.textContent = user.username;
       userSelect.appendChild(option);
-      users[user.id] = user;
     });
-  } else {
-    console.error('Erreur chargement utilisateurs:', data);
   }
 }
 
@@ -138,19 +59,6 @@ async function getCityFromCoordinates(latitude, longitude) {
   return data.address.city || data.address.town || data.address.village || 'Inconnue';
 }
 
-async function markMessagesAsRead(senderId) {
-  await fetch(`${supabaseUrl}/rest/v1/messages?read=eq.false&id_sent=eq.${senderId}&id_received=eq.${currentUserId}`, {
-    method: 'PATCH',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`
-    },
-    body: JSON.stringify({ read: true })
-  });
-}
-
-
 // Envoi message
 async function sendMessage(userId, content) {
   try {
@@ -171,13 +79,16 @@ async function sendMessage(userId, content) {
         id_received: userSelect.value,
         latitude: geo.latitude,
         longitude: geo.longitude,
-        city
+        city,
+        read: false
       })
     });
 
-    const data = await response.json();
-    if (!response.ok) console.error('Erreur message:', data);
-    else getMessages();
+    if (response.ok) {
+      getMessages();
+    } else {
+      console.error('Erreur message:', await response.json());
+    }
   } catch (e) {
     console.error('Erreur géoloc:', e);
   }
@@ -196,6 +107,22 @@ async function deleteMessage(messageId) {
   else console.error('Erreur suppression:', await response.json());
 }
 
+// Marquer messages comme lus
+async function markMessagesAsRead(fromUserId) {
+  const response = await fetch(`${supabaseUrl}/rest/v1/messages?read=eq.false&id_sent=eq.${fromUserId}&id_received=eq.${currentUserId}`, {
+    method: 'PATCH',
+    headers: {
+      'apikey': supabaseKey,
+      'Authorization': `Bearer ${supabaseKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ read: true })
+  });
+  if (!response.ok) {
+    console.error("Erreur lors du marquage des messages comme lus", await response.json());
+  }
+}
+
 // Afficher messages
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
@@ -203,8 +130,9 @@ async function getMessages() {
     return;
   }
 
+  await markMessagesAsRead(userSelect.value);
+
   const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=*&order=created_at.asc&or=(and(id_sent.eq.${currentUserId},id_received.eq.${userSelect.value}),and(id_sent.eq.${userSelect.value},id_received.eq.${currentUserId}))`, {
-    method: 'GET',
     headers: {
       'apikey': supabaseKey,
       'Authorization': `Bearer ${supabaseKey}`
@@ -216,7 +144,6 @@ async function getMessages() {
   if (response.ok) {
     chatMessages.innerHTML = '';
     let lastDate = null;
-
     data.forEach(msg => {
       const msgDate = new Date(msg.created_at).toLocaleDateString();
       const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -234,7 +161,6 @@ async function getMessages() {
       const msgEl = document.createElement('div');
       msgEl.textContent = `${sender}${city}: ${msg.content}`;
       msgEl.classList.add('message');
-
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
         const delBtn = document.createElement('span');
@@ -245,29 +171,49 @@ async function getMessages() {
       } else {
         msgEl.classList.add('received');
       }
-
       chatMessages.appendChild(msgEl);
     });
-
-    // ✅ ➕ ICI on marque les messages comme lus
-    await markMessagesAsRead(userSelect.value);
-
-    // ✅ ➕ Et on met à jour les pastilles 🔴 dans la liste
-    await getUsers();
-
   } else {
     console.error('Erreur chargement messages:', data);
   }
 }
 
-
-// Rafraîchissement automatique
+// Rafraîchissement automatique des messages
 function refreshMessages() {
   setInterval(getMessages, 1500);
 }
 
+// Mise à jour des pastilles 🔴
+async function updateUnreadCounts() {
+  for (const [id, user] of Object.entries(users)) {
+    if (id === currentUserId) continue;
+
+    const response = await fetch(`${supabaseUrl}/rest/v1/messages?select=id&read=eq.false&id_sent=eq.${id}&id_received=eq.${currentUserId}`, {
+      headers: {
+        'apikey': supabaseKey,
+        'Authorization': `Bearer ${supabaseKey}`
+      }
+    });
+
+    if (response.ok) {
+      const unread = await response.json();
+      const count = unread.length;
+
+      const option = [...userSelect.options].find(opt => opt.value === id);
+      if (option) {
+        const baseName = option.dataset.baseName;
+        option.textContent = count > 0 ? `${baseName} 🔴 (${count})` : baseName;
+      }
+    }
+  }
+}
+
+function startUnreadRefresh() {
+  setInterval(updateUnreadCounts, 2000);
+}
+
 // Connexion
-function login() {
+async function login() {
   const username = loginUsername.value;
   const password = loginPassword.value;
   const user = Object.values(users).find(u => u.username === username);
@@ -279,8 +225,10 @@ function login() {
       loginContainer.style.display = 'none';
       connectedUser.style.display = 'block';
       connectedUsername.textContent = user.username;
-      getMessages();
+      await getUsers();
+      await getMessages();
       refreshMessages();
+      startUnreadRefresh();
     } else alert('Mot de passe incorrect');
   } else alert('Utilisateur introuvable');
 }
@@ -308,50 +256,8 @@ sendButton.addEventListener('click', () => {
 
 loginButton.addEventListener('click', login);
 logoutButton.addEventListener('click', logout);
-
-window.onload = () => {
-  getUsers().then(() => {
-    getMessages();
-  });
-};
-
 userSelect.addEventListener('change', getMessages);
 
-// 🔐 Système d'inscription
-document.getElementById('signup-button').addEventListener('click', async () => {
-  const username = document.getElementById('signup-username').value.trim();
-  const password = document.getElementById('signup-password').value;
-  const confirmPassword = document.getElementById('signup-confirm-password').value;
-
-  if (!username || !password || !confirmPassword) {
-    alert("Tous les champs sont requis.");
-    return;
-  }
-
-  if (password !== confirmPassword) {
-    alert("Les mots de passe ne correspondent pas.");
-    return;
-  }
-
-  const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': supabaseKey,
-      'Authorization': `Bearer ${supabaseKey}`,
-      'Prefer': 'return=representation'
-    },
-    body: JSON.stringify({ username, password })
-  });
-
-  if (response.ok) {
-    alert("Compte créé !");
-    document.getElementById('signup-username').value = '';
-    document.getElementById('signup-password').value = '';
-    document.getElementById('signup-confirm-password').value = '';
-    await getUsers();
-  } else {
-    const errorData = await response.json();
-    alert("Erreur : " + (errorData.message || "Impossible de créer le compte."));
-  }
-});
+window.onload = async () => {
+  await getUsers(); // Charge liste utilisateurs une fois pour l'écran de login
+};
