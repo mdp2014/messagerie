@@ -39,8 +39,6 @@ async function getUnreadCounts() {
 }
 
 async function getUsers() {
-  const selectedId = userSelect.value; // ← sauvegarder la sélection actuelle
-
   const response = await fetch(`${supabaseUrl}/rest/v1/users?select=id,username,password`, {
     method: 'GET',
     headers: {
@@ -50,33 +48,23 @@ async function getUsers() {
   });
 
   const data = await response.json();
-
-  if (response.ok) {
-    userSelect.innerHTML = '';
-    data.forEach(user => {
-      const option = document.createElement('option');
-      option.value = user.id;
-      option.textContent = user.username;
-
-      // 🔴 Ajouter pastille si message non lu
-      if (user.id !== currentUserId && user.unreadCount && user.unreadCount > 0) {
-        option.textContent += ` 🔴 (${user.unreadCount})`;
-      }
-
-      userSelect.appendChild(option);
-      users[user.id] = user;
-    });
-
-    // ✅ Réappliquer la sélection précédente si encore disponible
-    if (selectedId && users[selectedId]) {
-      userSelect.value = selectedId;
-    }
-
-  } else {
+  if (!response.ok) {
     console.error('Erreur chargement utilisateurs:', data);
+    return;
   }
-}
 
+  const unreadCounts = await getUnreadCounts(); // ← Nouveau
+
+  userSelect.innerHTML = '';
+  data.forEach(user => {
+    const option = document.createElement('option');
+    const unread = unreadCounts[user.id] || 0;
+    option.value = user.id;
+    option.textContent = user.username + (unread > 0 ? ` 🔴 (${unread})` : '');
+    userSelect.appendChild(option);
+    users[user.id] = user;
+  });
+}
 
 // Charger utilisateurs
 async function getUsers_() {
