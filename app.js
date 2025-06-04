@@ -67,7 +67,29 @@ async function getUsers() {
             'apikey': supabaseKey,
             'Authorization': `Bearer ${supabaseKey}`
           }
+        });
+        if (msgResponse.ok) {
+          const unreadMessages = await msgResponse.json();
+          unreadCount = unreadMessages.length;
+        }
+      }
 
+      const option = document.createElement('option');
+      option.value = user.id;
+      option.textContent = user.username + (unreadCount > 0 ? ` 🔴 (${unreadCount})` : '');
+
+      // ✅ Remet la sélection si c'était lui avant le reset
+      if (user.id === selectedId) {
+        option.selected = true;
+      }
+
+      userSelect.appendChild(option);
+    }
+
+  } else {
+    console.error('Erreur chargement utilisateurs:', data);
+  }
+}
 
 
 
