@@ -94,30 +94,47 @@
         return;
       }
 
-      const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': supabaseKey,
-          'Authorization': `Bearer ${supabaseKey}`,
-          'Prefer': 'return=representation'
-        },
-        body: JSON.stringify({
-          username: username,
-          password: password
-        })
-      });
+      // Hash du mot de passe (SHA-256)
+      const hashedPassword = await hashPassword(password);
 
-      if (response.ok) {
-        message.textContent = 'Compte créé avec succès attendez😀🌈 15 seconde vous allez être diriger vers le site...';
-        message.classList.add('success');
-        setTimeout(function() {
-  window.location.href = "https://mdp2014.github.io/messagerie/";
-}, 15000);
-      } else {
-        const errorData = await response.json();
-        message.textContent = 'Erreur : ' + (errorData.message || 'Impossible de créer le compte.');
+      try {
+        const response = await fetch(`${supabaseUrl}/rest/v1/users`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': supabaseKey,
+            'Authorization': `Bearer ${supabaseKey}`,
+            'Prefer': 'return=representation'
+          },
+          body: JSON.stringify({
+            username: username,
+            password: hashedPassword
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          message.textContent = 'Compte créé avec succès ! Vous allez être redirigé...';
+          message.classList.add('success');
+          setTimeout(() => {
+            window.location.href = "https://mdp2014.github.io/messagerie/";
+          }, 5000); // 5 secondes
+        } else {
+          message.textContent = 'Erreur : ' + (data.message || JSON.stringify(data));
+        }
+      } catch (error) {
+        message.textContent = 'Erreur réseau : ' + error.message;
       }
+    }
+
+    // Fonction de hash en SHA-256
+    async function hashPassword(password) {
+      const encoder = new TextEncoder();
+      const data = encoder.encode(password);
+      const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+      const hashArray = Array.from(new Uint8Array(hashBuffer));
+      return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     }
   </script>
 
