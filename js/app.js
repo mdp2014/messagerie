@@ -61,8 +61,8 @@ async function getCityFromCoordinates(latitude, longitude) {
 // Envoi message
 async function sendMessage(userId, content) {
   try {
-    const geo = await getGeolocation();
-    const city = await getCityFromCoordinates(geo.latitude, geo.longitude);
+   // const geo = await getGeolocation();
+  //  const city = await getCityFromCoordinates(geo.latitude, geo.longitude);
     const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
       method: 'POST',
       headers: {
@@ -147,7 +147,7 @@ async function getMessages() {
       const msgDate = new Date(msg.created_at).toLocaleDateString();
       const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const sender = users[msg.id_sent]?.username || 'Inconnu';
-      const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
+      //const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
 
       if (msgDate !== lastDate) {
         const dateEl = document.createElement('div');
@@ -158,7 +158,8 @@ async function getMessages() {
       }
 
       const msgEl = document.createElement('div');
-      msgEl.textContent = `${sender}${city}: ${msg.content}`;
+  //    msgEl.textContent = `${sender}${city}: ${msg.content}`;
+      msgEl.textContent = `${sender}${msgTime}: ${msg.content}`;
       msgEl.classList.add('message');
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
