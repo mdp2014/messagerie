@@ -13,8 +13,6 @@ const logoutButton = document.getElementById('logout-button');
 
 let users = {};
 let currentUserId = null;
-
-// Charger utilisateurs une seule fois
 async function getUsers() {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/users?select=id,username,password`, {
     headers: {
@@ -36,33 +34,8 @@ async function getUsers() {
     });
   }
 }
-
-// Géolocalisation
-//function getGeolocation() {
-//  return new Promise((resolve, reject) => {
-//    if (navigator.geolocation) {
- //     navigator.geolocation.getCurrentPosition(
-  //      pos => resolve({
-  //        latitude: pos.coords.latitude,
-   //       longitude: pos.coords.longitude
- //       }),
-  //      reject
-//      );
-//    } else reject(new Error('Non supporté'));
-//  });
-//}
-
-//async function getCityFromCoordinates(latitude, longitude) {
- // const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}`);
-//  const data = await response.json();
-//return data.address.city || data.address.town || data.address.village || 'Inconnue';
-//}
-
-// Envoi message
 async function sendMessage(userId, content) {
   try {
-   // const geo = await getGeolocation();
-  //  const city = await getCityFromCoordinates(geo.latitude, geo.longitude);
     const response = await fetch(`${SUPABASE_URL}/rest/v1/messages`, {
       method: 'POST',
       headers: {
@@ -76,9 +49,6 @@ async function sendMessage(userId, content) {
         content,
         created_at: new Date().toISOString(),
         id_received: userSelect.value,
-     //   latitude: geo.latitude,
-     //   longitude: geo.longitude,
-     //   city,
         read: false
       })
     });
@@ -92,8 +62,6 @@ async function sendMessage(userId, content) {
     console.error('Erreur géoloc:', e);
   }
 }
-
-// Supprimer message
 async function deleteMessage(messageId) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?id=eq.${messageId}`, {
     method: 'DELETE',
@@ -105,8 +73,6 @@ async function deleteMessage(messageId) {
   if (response.ok) getMessages();
   else console.error('Erreur suppression:', await response.json());
 }
-
-// Marquer messages comme lus
 async function markMessagesAsRead(fromUserId) {
   const response = await fetch(`${SUPABASE_URL}/rest/v1/messages?read=eq.false&id_sent=eq.${fromUserId}&id_received=eq.${currentUserId}`, {
     method: 'PATCH',
@@ -122,7 +88,6 @@ async function markMessagesAsRead(fromUserId) {
   }
 }
 
-// Afficher messages
 async function getMessages() {
   if (!currentUserId || !userSelect.value) {
     chatMessages.innerHTML = '';
@@ -137,17 +102,15 @@ async function getMessages() {
       'Authorization': `Bearer ${SUPABASE_KEY}`
     }
   });
-
   const data = await response.json();
 
-  if (response.ok) {
-    chatMessages.innerHTML = '';
+    if (response.ok) {
+  chatMessages.innerHTML = '';
     let lastDate = null;
     data.forEach(msg => {
       const msgDate = new Date(msg.created_at).toLocaleDateString();
       const msgTime = new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
       const sender = users[msg.id_sent]?.username || 'Inconnu';
-      //const city = msg.city ? ` (${msg.city} - ${msgTime})` : '';
 
       if (msgDate !== lastDate) {
         const dateEl = document.createElement('div');
@@ -156,10 +119,8 @@ async function getMessages() {
         chatMessages.appendChild(dateEl);
         lastDate = msgDate;
       }
-
       const msgEl = document.createElement('div');
-  //    msgEl.textContent = `${sender}${city}: ${msg.content}`;
-      msgEl.textContent = `${sender}${msgTime}: ${msg.content}`;
+      msgEl.textContent = `${sender} ${msgTime}: ${msg.content}`;
       msgEl.classList.add('message');
       if (msg.id_sent === currentUserId) {
         msgEl.classList.add('sent');
@@ -178,12 +139,10 @@ async function getMessages() {
   }
 }
 
-// Rafraîchissement automatique des messages
 function refreshMessages() {
   setInterval(getMessages, 1500);
 }
 
-// Mise à jour des pastilles 🔴
 async function updateUnreadCounts() {
   for (const [id, user] of Object.entries(users)) {
     if (id === currentUserId) continue;
@@ -212,7 +171,6 @@ function startUnreadRefresh() {
   setInterval(updateUnreadCounts, 2000);
 }
 
-// Connexion
 async function login() {
   const username = loginUsername.value;
   const password = loginPassword.value;
@@ -233,15 +191,12 @@ async function login() {
   } else alert('Utilisateur introuvable');
 }
 
-// Déconnexion
 function logout() {
   currentUserId = null;
   loginContainer.style.display = 'block';
   connectedUser.style.display = 'none';
   chatMessages.innerHTML = '';
 }
-
-// Événements
 sendButton.addEventListener('click', () => {
   if (currentUserId) {
     const content = messageInput.value.trim();
@@ -253,11 +208,79 @@ sendButton.addEventListener('click', () => {
     alert('Connectez-vous pour envoyer un message');
   }
 });
-
 loginButton.addEventListener('click', login);
 logoutButton.addEventListener('click', logout);
 userSelect.addEventListener('change', getMessages);
 
-window.onload = async () => {
+await getUsers();
+      alert('Connecté !');
+      loginContainer.style.display = 'none';
+      connectedUser.style.display = 'block';
+      connectedUsername.textContent = user.username;
+      await getUsers();
+      await getMessages();
+      refreshMessages();
+      startUnreadRefresh();
+    } else alert('Mot de passe incorrect');
   await getUsers(); // Charge liste utilisateurs une fois pour l'écran de login
+window.onload = async () => {
 };
+
+  currentUserId = null;
+  loginContainer.style.display = 'block';
+  connectedUser.style.display = 'none';
+  chatMessages.innerHTML = '';
+}
+sendButton.addEventListener('click', () => {
+  const username = loginUsername.value;
+  const password = loginPassword.value;
+  const user = Object.values(users).find(u => u.username === username);
+
+  if (user) {
+    if (user.password === '' || user.password === password) {
+      currentUserId = user.id;
+      alert('Connecté !');
+      loginContainer.style.display = 'none';
+      connectedUser.style.display = 'block';
+      connectedUsername.textContent = user.username;
+      await getUsers();
+      await getMessages();
+      refreshMessages();
+      startUnreadRefresh();
+    } else alert('Mot de passe incorrect');
+  } else alert('Utilisateur introuvable');
+}
+
+function logout() {
+  currentUserId = null;
+  loginContainer.style.display = 'block';
+  connectedUser.style.display = 'none';
+  chatMessages.innerHTML = '';
+}
+sendButton.addEventListener('click', () => {
+  if (currentUserId) {
+    const content = messageInput.value.trim();
+    if (content) {
+      sendMessage(currentUserId, content);
+      messageInput.value = '';
+    }
+  } else {
+    alert('Connectez-vous pour envoyer un message');
+  }
+});
+loginButton.addEventListener('click', login);
+logoutButton.addEventListener('click', logout);
+    if (content) {
+      sendMessage(currentUserId, content);
+
+
+
+
+await getUsers();
+  }
+});
+loginButton.addEventListener('click', login);
+logoutButton.addEventListener('click', logout);
+  await getUsers(); // Charge liste utilisateurs une fois pour l'écran de login
+  await getUsers(); // Charge liste utilisateurs une fois pour l'écran de login
+await getUsers();
