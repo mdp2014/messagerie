@@ -76,9 +76,9 @@ async function sendMessage(userId, content) {
         content,
         created_at: new Date().toISOString(),
         id_received: userSelect.value,
-        latitude: geo.latitude,
-        longitude: geo.longitude,
-        city,
+     //   latitude: geo.latitude,
+     //   longitude: geo.longitude,
+     //   city,
         read: false
       })
     });
